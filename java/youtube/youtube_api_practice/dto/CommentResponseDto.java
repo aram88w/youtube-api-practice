@@ -1,6 +1,5 @@
 package youtube.youtube_api_practice.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import youtube.youtube_api_practice.domain.Comment;

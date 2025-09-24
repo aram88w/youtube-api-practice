@@ -10,9 +10,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.Video;
+import youtube.youtube_api_practice.dto.ChannelsResponseDto;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -28,9 +31,11 @@ public class YoutubeApi {
         this.apiKey = apiKey;
     }
 
-    // 검색어로 유튜브 채널 ID 가져오기
-    public String getChannelIdBySearch(String keyword) {
+    // 검색어로 유튜브 채널 ID 3개 가져오기
+    public List<ChannelsResponseDto> getChannelIdBySearch(String keyword) {
         log.info("getChannelIdBySearch {}", keyword);
+
+        List<ChannelsResponseDto> channels = new ArrayList<>();
 
         UriComponentsBuilder searchUri = UriComponentsBuilder.fromUriString(BASE + "/search")
                 .queryParam("part", "snippet")
@@ -50,31 +55,23 @@ public class YoutubeApi {
             throw new RuntimeException("채널을 찾을 수 없습니다: " + keyword);
         }
 
-        String bestChannelId = null;
-        LocalDateTime earliestPublishedAt = null;
-
         for (JsonNode item : searchRoot.get("items")) {
-            String currentChannelId = item.path("id").path("channelId").asText();
-            if (currentChannelId.isEmpty()) {
-                continue;
-            }
+            String channelId = item.path("id").path("channelId").asText();
+            String channelName = item.path("snippet").path("title").asText();
+            String channelDescription = item.path("snippet").path("description").asText();
+            String channelThumbnails= item.path("snippet").path("thumbnails").path("high").path("url").asText();
 
-            LocalDateTime currentPublishedAt = OffsetDateTime
-                    .parse(item.path("snippet").path("publishedAt").asText())
-                    .toLocalDateTime();
+            ChannelsResponseDto channel = ChannelsResponseDto.builder()
+                    .id(channelId)
+                    .name(channelName)
+                    .description(channelDescription)
+                    .thumbnailUrl(channelThumbnails)
+                    .build();
 
-            if (bestChannelId == null || currentPublishedAt.isBefore(earliestPublishedAt)) {
-                earliestPublishedAt = currentPublishedAt;
-                bestChannelId = currentChannelId;
-            }
+            channels.add(channel);
         }
 
-        if (bestChannelId == null) {
-            // Fallback to the first channel if no suitable channel found (should not happen with maxResults > 0)
-            return searchRoot.get("items").get(0).path("id").path("channelId").asText();
-        }
-
-        return bestChannelId;
+        return channels;
     }
 
     // 채널 ID로 Channel 객체 생성
@@ -111,7 +108,7 @@ public class YoutubeApi {
                 .name(name)
                 .description(description)
                 .searchCount(0)
-                .lastSearchedAt(LocalDateTime.now())
+                .lastSelectAt(LocalDateTime.now())
                 .thumbnailUrl(thumbnailUrl)
                 .build();
     }

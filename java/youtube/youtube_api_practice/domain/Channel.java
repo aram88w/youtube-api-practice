@@ -39,8 +39,8 @@ public class Channel implements Persistable<String> {
     @Column(name = "search_count", nullable = false)
     private int searchCount;
 
-    @Column(name = "last_searched_at")
-    private LocalDateTime lastSearchedAt;
+    @Column(name = "last_selected_at")
+    private LocalDateTime lastSelectAt;
 
     @Column(name = "thumbnail_url", columnDefinition = "TEXT")
     private String thumbnailUrl;
@@ -48,21 +48,21 @@ public class Channel implements Persistable<String> {
 
     @Builder
     public Channel(String id, String uploadsPlaylistId, String name, String description, int searchCount,
-                   LocalDateTime lastSearchedAt, String thumbnailUrl) {
+                   LocalDateTime lastSelectAt, String thumbnailUrl) {
         this.id = id;
         this.uploadsPlaylistId = uploadsPlaylistId;
         this.name = name;
         this.description = description;
         this.searchCount = searchCount;
-        this.lastSearchedAt = lastSearchedAt;
+        this.lastSelectAt = lastSelectAt;
         this.thumbnailUrl = thumbnailUrl;
     }
 
-    public void updateChannelInfo(String name, String description, String thumbnailUrl, LocalDateTime lastSearchedAt) {
+    public void updateChannelInfo(String name, String description, String thumbnailUrl, LocalDateTime lastSelectAt) {
         this.name = name;
         this.description = description;
         this.thumbnailUrl = thumbnailUrl;
-        this.lastSearchedAt = lastSearchedAt;
+        this.lastSelectAt = lastSelectAt;
     }
 
     //==연관관계 편의 메서드==//

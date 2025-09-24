@@ -29,19 +29,16 @@ public class CommentService {
     private final VideoRepository videoRepository;
     private final CommentRepository commentRepository;
 
-    // 검색어로 채널 Id 가져오기
-    public String getChannelId(String search) {
-        log.info("getChannelId {}", search);
-        return youtubeApi.getChannelIdBySearch(search);
-    }
 
     @Transactional
     public List<CommentResponseDto> getComments(String channelId) {
 
         Optional<Channel> channelOpt = channelRepository.findById(channelId);
 
-        //채널이 존재하고, 마지막 검색시간이 1시간 이내일 경우 DB에서 조회 후 리턴
-        if(channelOpt.isPresent() && channelOpt.get().getLastSearchedAt().isAfter(LocalDateTime.now().minusHours(1))) {
+        //채널이 존재하고, 마지막 검색시간이 null이 아니고 1시간 이내일 경우 DB에서 조회 후 리턴
+        if (channelOpt.isPresent()
+                && channelOpt.get().getLastSelectAt() != null
+                && channelOpt.get().getLastSelectAt().isAfter(LocalDateTime.now().minusHours(1))) {
             log.info("DB에서 댓글을 조회합니다. channelId={}", channelId);
             return findCommentsFromDb(channelId);
         }
