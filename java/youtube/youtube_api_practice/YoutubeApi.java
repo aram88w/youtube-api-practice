@@ -10,7 +10,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.Video;
-import youtube.youtube_api_practice.dto.ChannelsResponseDto;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -31,17 +30,17 @@ public class YoutubeApi {
         this.apiKey = apiKey;
     }
 
-    // 검색어로 유튜브 채널 ID 3개 가져오기
-    public List<ChannelsResponseDto> getChannelIdBySearch(String keyword) {
-        log.info("getChannelIdBySearch {}", keyword);
+    // 검색어로 유튜브 채널 ID 5개 가져오기
+    public List<String> getChannelIdsBySearch(String keyword) {
+        log.info("getChannelsIdBySearch {}", keyword);
 
-        List<ChannelsResponseDto> channels = new ArrayList<>();
+        List<String> channelIds = new ArrayList<>();
 
         UriComponentsBuilder searchUri = UriComponentsBuilder.fromUriString(BASE + "/search")
                 .queryParam("part", "snippet")
                 .queryParam("q", keyword)
                 .queryParam("type", "channel")
-                .queryParam("maxResults", 3) // Fetch 3 results
+                .queryParam("maxResults", 5) // Fetch 3 results
                 .queryParam("key", apiKey);
 
         JsonNode searchRoot = webClient.get()
@@ -57,21 +56,14 @@ public class YoutubeApi {
 
         for (JsonNode item : searchRoot.get("items")) {
             String channelId = item.path("id").path("channelId").asText();
-            String channelName = item.path("snippet").path("title").asText();
-            String channelDescription = item.path("snippet").path("description").asText();
-            String channelThumbnails= item.path("snippet").path("thumbnails").path("high").path("url").asText();
+//            String channelName = item.path("snippet").path("title").asText();
+//            String channelDescription = item.path("snippet").path("description").asText();
+//            String channelThumbnails= item.path("snippet").path("thumbnails").path("high").path("url").asText();
 
-            ChannelsResponseDto channel = ChannelsResponseDto.builder()
-                    .id(channelId)
-                    .name(channelName)
-                    .description(channelDescription)
-                    .thumbnailUrl(channelThumbnails)
-                    .build();
-
-            channels.add(channel);
+            channelIds.add(channelId);
         }
 
-        return channels;
+        return channelIds;
     }
 
     // 채널 ID로 Channel 객체 생성
@@ -79,7 +71,7 @@ public class YoutubeApi {
         log.info("getChannelById {}", channelId);
 
         UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/channels")
-                .queryParam("part", "snippet,contentDetails")
+                .queryParam("part", "snippet,contentDetails,statistics")
                 .queryParam("id", channelId)
                 .queryParam("key", apiKey);
 
@@ -100,6 +92,9 @@ public class YoutubeApi {
         String thumbnailUrl = item.path("snippet").path("thumbnails").path("high").path("url").asText();
         String uploadsPlaylistId = item.path("contentDetails").path("relatedPlaylists").path("uploads").asText();
 
+        JsonNode subsNode = item.path("statistics").path("subscriberCount");
+        Long subscriberCount = subsNode.isMissingNode() || subsNode.asText().isEmpty() ? 0L : Long.parseLong(subsNode.asText());
+
         log.info("description {}", description);
 
         return Channel.builder()
@@ -108,8 +103,9 @@ public class YoutubeApi {
                 .name(name)
                 .description(description)
                 .searchCount(0)
-                .lastSelectAt(LocalDateTime.now())
+//                .lastSelectAt(LocalDateTime.now())
                 .thumbnailUrl(thumbnailUrl)
+                .subscriberCount(subscriberCount)
                 .build();
     }
 

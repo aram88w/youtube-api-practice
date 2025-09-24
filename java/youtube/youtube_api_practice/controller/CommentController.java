@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import youtube.youtube_api_practice.YoutubeApi;
-import youtube.youtube_api_practice.dto.ChannelsResponseDto;
+import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.dto.CommentResponseDto;
 import youtube.youtube_api_practice.service.CommentService;
 
@@ -23,9 +23,9 @@ public class CommentController {
     private final YoutubeApi youtubeApi;
 
     @GetMapping("/channel/{search}")
-    public List<ChannelsResponseDto> getChannels(@PathVariable String search) {
+    public List<ChannelResponseDto> getChannels(@PathVariable String search) {
         log.info("getChannels {}", search);
-        return youtubeApi.getChannelIdBySearch(search);
+        return commentService.getChannelIds(search);
     }
 
     @GetMapping("/comments/{channelId}")

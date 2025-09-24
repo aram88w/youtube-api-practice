@@ -45,10 +45,13 @@ public class Channel implements Persistable<String> {
     @Column(name = "thumbnail_url", columnDefinition = "TEXT")
     private String thumbnailUrl;
 
+    @Column(name = "subscriber_count")
+    private Long subscriberCount; // 구독자 수
+
 
     @Builder
     public Channel(String id, String uploadsPlaylistId, String name, String description, int searchCount,
-                   LocalDateTime lastSelectAt, String thumbnailUrl) {
+                   LocalDateTime lastSelectAt, String thumbnailUrl, Long subscriberCount) {
         this.id = id;
         this.uploadsPlaylistId = uploadsPlaylistId;
         this.name = name;
@@ -56,12 +59,20 @@ public class Channel implements Persistable<String> {
         this.searchCount = searchCount;
         this.lastSelectAt = lastSelectAt;
         this.thumbnailUrl = thumbnailUrl;
+        this.subscriberCount = subscriberCount;
     }
 
-    public void updateChannelInfo(String name, String description, String thumbnailUrl, LocalDateTime lastSelectAt) {
+    public void updateChannelInfo(String name, String description, String thumbnailUrl,
+                                  String uploadsPlaylistId, LocalDateTime lastSelectAt, Long subscriberCount) {
         this.name = name;
         this.description = description;
         this.thumbnailUrl = thumbnailUrl;
+        this.lastSelectAt = lastSelectAt;
+        this.uploadsPlaylistId = uploadsPlaylistId;
+        this.subscriberCount = subscriberCount;
+    }
+
+    public void setLastSelectAt(LocalDateTime lastSelectAt) {
         this.lastSelectAt = lastSelectAt;
     }
 

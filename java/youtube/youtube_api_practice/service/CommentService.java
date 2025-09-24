@@ -6,17 +6,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import youtube.youtube_api_practice.YoutubeApi;
 import youtube.youtube_api_practice.domain.Channel;
-import youtube.youtube_api_practice.domain.Comment;
+import youtube.youtube_api_practice.domain.SearchCache;
 import youtube.youtube_api_practice.domain.Video;
+import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.dto.CommentResponseDto;
 import youtube.youtube_api_practice.repository.ChannelRepository;
 import youtube.youtube_api_practice.repository.CommentRepository;
-import youtube.youtube_api_practice.repository.VideoRepository;
+import youtube.youtube_api_practice.repository.SearchCacheRepository;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -26,12 +25,81 @@ public class CommentService {
 
     private final YoutubeApi youtubeApi;
     private final ChannelRepository channelRepository;
-    private final VideoRepository videoRepository;
     private final CommentRepository commentRepository;
+    private final SearchCacheRepository searchCacheRepository;
+
+    @Transactional
+    public List<ChannelResponseDto> getChannelIds(String search) {
+        log.info("getChannels {}", search);
+
+        Optional<SearchCache> cacheOpt = searchCacheRepository.findById(search);
+
+        // 검색한 적이 있다면
+        if (cacheOpt.isPresent()) {
+            SearchCache cache = cacheOpt.get();
+
+            // 갱신한지 24시간이 지나지 않았으면 DB에서 바로 조회
+            if (cache.getLastSearchedAt().isAfter(LocalDateTime.now().minusHours(24))) {
+                Set<String> channelIds = cache.getChannelIds();
+                List<Channel> chennels = channelRepository.findByIdInOrderBySubscriberCountDesc(channelIds);
+
+                return ChannelResponseDto.ChannelToDto(chennels);
+
+            } else { // 갱신한지 24시간이 지났으면 API 요청 후 갱신
+                List<String> channelIdsBySearch = youtubeApi.getChannelIdsBySearch(search);
+                Set<String> channelIds = cache.getChannelIds();
+
+                channelIds.addAll(channelIdsBySearch);
+                cache.setChannelIds(channelIds);
+                cache.setLastSearchedAt(LocalDateTime.now());
+
+                searchCacheRepository.save(cache);
+
+                return saveChannels(channelIds);
+            }
+        } else { // 처음 검색하면
+            List<String> channelIdsBySearch = youtubeApi.getChannelIdsBySearch(search);
+            Set<String> channelIds = new HashSet<>(channelIdsBySearch);
+
+            SearchCache cache = new SearchCache();
+            cache.setKeyword(search);
+            cache.setLastSearchedAt(LocalDateTime.now());
+            cache.setChannelIds(channelIds);
+
+            searchCacheRepository.save(cache);
+
+            return saveChannels(channelIds);
+        }
+    }
+
+    public List<ChannelResponseDto> saveChannels(Set<String> channelIds) {
+        log.info("saveChannels {}", channelIds);
+
+        List<Channel> result = new ArrayList<>();
+
+        for (String channelId : channelIds) {
+            Optional<Channel> channelOpt = channelRepository.findById(channelId);
+
+            Channel channel = youtubeApi.getChannelById(channelId);
+            result.add(channel);
+
+            // 갱신
+            if (channelOpt.isPresent()) {
+                channelOpt.get().updateChannelInfo(channel.getName(), channel.getDescription(), channel.getThumbnailUrl(),
+                        channel.getUploadsPlaylistId(), channelOpt.get().getLastSelectAt(), channel.getSubscriberCount());
+                channelRepository.save(channelOpt.get());
+            } else { // 새로 저장
+                channelRepository.save(channel);
+            }
+        }
+
+        return ChannelResponseDto.sortBySubscriberCountDesc(ChannelResponseDto.ChannelToDto(result));
+    }
 
 
     @Transactional
     public List<CommentResponseDto> getComments(String channelId) {
+        log.info("getComments {}", channelId);
 
         Optional<Channel> channelOpt = channelRepository.findById(channelId);
 
@@ -47,17 +115,10 @@ public class CommentService {
 
         Channel channel = channelOpt.orElse(null);
 
-        if (channel != null) {
-            //채널 정보 업데이트 (검색 시간 갱신)
-            channel.updateChannelInfo(channel.getName(), channel.getDescription(), channel.getThumbnailUrl(), LocalDateTime.now());
-
-            //기존 채널: 비디오/댓글 정보를 지우고 DB에 즉시 반영 (flush)
-            channel.getVideos().clear();
-            channelRepository.saveAndFlush(channel);
-        } else {
-            //새로운 채널
-            channel = youtubeApi.getChannelById(channelId);
-        }
+        channel.setLastSelectAt(LocalDateTime.now());
+        //기존 채널: 비디오/댓글 정보를 지우고 DB에 즉시 반영 (flush)
+        channel.getVideos().clear();
+        channelRepository.saveAndFlush(channel);
 
         //API를 통해 새로운 정보 가져오기
         youtubeApi.getVideosByChannel(channel);
