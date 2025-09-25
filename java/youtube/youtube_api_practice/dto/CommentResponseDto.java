@@ -15,6 +15,7 @@ public class CommentResponseDto {
     private final String authorName;
     private final String authorThumbnailUrl;
     private final int likeCount;
+    private final int replyCount;
     private final LocalDateTime publishedAt;
 
     // Video fields
@@ -29,6 +30,7 @@ public class CommentResponseDto {
         this.authorName = comment.getAuthorName();
         this.authorThumbnailUrl = comment.getAuthorThumbnailUrl();
         this.likeCount = comment.getLikeCount();
+        this.replyCount = comment.getReplyCount();
         this.publishedAt = comment.getPublishedAt();
         this.videoId = comment.getVideo().getId();
         this.videoTitle = comment.getVideo().getTitle();

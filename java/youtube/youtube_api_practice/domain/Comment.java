@@ -37,6 +37,9 @@ public class Comment implements Persistable<String> {
     @Column(name = "like_count", nullable = false)
     private int likeCount;
 
+    @Column(name = "reply_count")
+    private int replyCount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "video_id", nullable = false)
     private Video video;
@@ -56,7 +59,7 @@ public class Comment implements Persistable<String> {
     }
 
     @Builder
-    public Comment(String id, String authorId, String authorName, String authorThumbnailUrl, String content, LocalDateTime publishedAt, int likeCount, Video video) {
+    public Comment(String id, String authorId, String authorName, String authorThumbnailUrl, String content, LocalDateTime publishedAt, int likeCount, int replyCount, Video video) {
         this.id = id;
         this.authorId = authorId;
         this.authorName = authorName;
@@ -64,6 +67,7 @@ public class Comment implements Persistable<String> {
         this.content = content;
         this.publishedAt = publishedAt;
         this.likeCount = likeCount;
+        this.replyCount = replyCount;
         this.video = video;
     }
 

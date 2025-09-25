@@ -10,6 +10,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.Video;
+import youtube.youtube_api_practice.dto.ReplyCommentDto;
+import youtube.youtube_api_practice.dto.ReplyResponseDto;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -110,7 +112,6 @@ public class YoutubeApi {
     }
 
 
-
     // 채널에서 최근 비디오 id 50개 가져오기 (페이징)
     public void getVideosByChannel(Channel channel) {
         // 1. 채널의 공식 '업로드' 플레이리스트 ID를 사용합니다.
@@ -120,7 +121,7 @@ public class YoutubeApi {
         UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/playlistItems")
                 .queryParam("part", "snippet") // snippet에 동영상 정보가 포함되어 있습니다.
                 .queryParam("playlistId", uploadsPlaylistId)
-                .queryParam("maxResults", 30)
+                .queryParam("maxResults", 50)
                 .queryParam("key", apiKey);
 
         JsonNode root = webClient.get()
@@ -167,7 +168,7 @@ public class YoutubeApi {
         UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/commentThreads")
                 .queryParam("part", "snippet")
                 .queryParam("videoId", videoId)
-                .queryParam("maxResults", 10)            // 상위 20개
+                .queryParam("maxResults", 10)            // 상위 10개
                 .queryParam("order", "relevance")      // 좋아요/추천 위주
                 .queryParam("key", apiKey);
 
@@ -191,6 +192,7 @@ public class YoutubeApi {
                 String authorThumbnail = snippet.path("authorProfileImageUrl").asText(null); // null 허용
                 String content = snippet.path("textDisplay").asText();
                 int likeCount = snippet.path("likeCount").asInt(0);
+                int replyCount = item.path("snippet").path("totalReplyCount").asInt(0);
                 LocalDateTime publishedAt = OffsetDateTime
                         .parse(snippet.path("publishedAt").asText())
                         .toLocalDateTime();
@@ -203,6 +205,7 @@ public class YoutubeApi {
                         .content(content)
                         .likeCount(likeCount)
                         .publishedAt(publishedAt)
+                        .replyCount(replyCount)
                         .video(video)
                         .build();
 
@@ -215,5 +218,54 @@ public class YoutubeApi {
         }
     }
 
+    // 대댓글 가져오기
+    public ReplyResponseDto getRepliesByComment(String commentId, String pageToken) {
+        log.info("getRepliesByComment {} pageToken {}", commentId, pageToken);
 
+        UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/comments")
+                .queryParam("part", "snippet")
+                .queryParam("parentId", commentId)
+                .queryParam("maxResults", 10)
+                .queryParam("key", apiKey);
+
+        if (pageToken != null && !pageToken.isEmpty()) {
+            uri.queryParam("pageToken", pageToken);
+        }
+
+        JsonNode root = webClient.get()
+                .uri(uri.build().toUri())
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .block();
+
+        if (root == null || !root.has("items")) {
+            return new ReplyResponseDto(null); // 대댓글이 없는 경우
+        }
+
+        ReplyResponseDto replyResponseDto = new ReplyResponseDto(root.path("nextPageToken").asText(null));
+
+        for (JsonNode item : root.get("items")) {
+            JsonNode snippet = item.path("snippet");
+
+            String authorName = snippet.path("authorDisplayName").asText();
+            String authorThumbnail = snippet.path("authorProfileImageUrl").asText();
+            String content = snippet.path("textDisplay").asText();
+            int likeCount = snippet.path("likeCount").asInt(0);
+            LocalDateTime publishedAt = OffsetDateTime
+                    .parse(snippet.path("publishedAt").asText())
+                    .toLocalDateTime();
+
+            ReplyCommentDto replyCommentDto = ReplyCommentDto.builder()
+                    .name(authorName)
+                    .ThumbnailUrl(authorThumbnail)
+                    .content(content)
+                    .likeCount(likeCount)
+                    .createdAt(publishedAt)
+                    .build();
+
+            replyResponseDto.getReplyComments().add(replyCommentDto);
+        }
+
+        return replyResponseDto;
+    }
 }

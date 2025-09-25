@@ -2,13 +2,12 @@ package youtube.youtube_api_practice.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.*;
 import youtube.youtube_api_practice.YoutubeApi;
 import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.dto.CommentResponseDto;
+import youtube.youtube_api_practice.dto.ReplyResponseDto;
 import youtube.youtube_api_practice.service.CommentService;
 
 import java.util.List;
@@ -20,7 +19,6 @@ import java.util.List;
 public class CommentController {
 
     private final CommentService commentService;
-    private final YoutubeApi youtubeApi;
 
     @GetMapping("/channel/{search}")
     public List<ChannelResponseDto> getChannels(@PathVariable String search) {
@@ -28,9 +26,24 @@ public class CommentController {
         return commentService.getChannelIds(search);
     }
 
+
+    @GetMapping("/channel/detail/{channelId}")
+    public ChannelResponseDto getChannelDetails(@PathVariable String channelId) {
+        return commentService.getChannelDetails(channelId);
+    }
+
+    @GetMapping("/comments/{commentId}/replies")
+    public ReplyResponseDto getReplies(@PathVariable String commentId,
+                                       @RequestParam(required = false) String pageToken) {
+        log.info("getReplies for commentId {} with pageToken {}", commentId, pageToken);
+        return commentService.getReplies(commentId, pageToken);
+    }
+
     @GetMapping("/comments/{channelId}")
-    public List<CommentResponseDto> getComments(@PathVariable String channelId) {
-        log.info("getComments {}", channelId);
-        return commentService.getComments(channelId);
+    public Page<CommentResponseDto> getComments(@PathVariable String channelId,
+                                                @RequestParam(defaultValue = "0") int page,
+                                                @RequestParam(defaultValue = "10") int size) {
+        log.info("getComments {} page={} size={}", channelId, page, size);
+        return commentService.getComments(channelId, page, size);
     }
 }

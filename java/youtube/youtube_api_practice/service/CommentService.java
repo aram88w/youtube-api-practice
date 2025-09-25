@@ -6,17 +6,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import youtube.youtube_api_practice.YoutubeApi;
 import youtube.youtube_api_practice.domain.Channel;
+import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.SearchCache;
 import youtube.youtube_api_practice.domain.Video;
 import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.dto.CommentResponseDto;
+import youtube.youtube_api_practice.dto.ReplyResponseDto;
 import youtube.youtube_api_practice.repository.ChannelRepository;
 import youtube.youtube_api_practice.repository.CommentRepository;
 import youtube.youtube_api_practice.repository.SearchCacheRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -97,9 +101,10 @@ public class CommentService {
     }
 
 
+
     @Transactional
-    public List<CommentResponseDto> getComments(String channelId) {
-        log.info("getComments {}", channelId);
+    public Page<CommentResponseDto> getComments(String channelId, int page, int size) {
+        log.info("getComments {} page={} size={}", channelId, page, size);
 
         Optional<Channel> channelOpt = channelRepository.findById(channelId);
 
@@ -108,12 +113,12 @@ public class CommentService {
                 && channelOpt.get().getLastSelectAt() != null
                 && channelOpt.get().getLastSelectAt().isAfter(LocalDateTime.now().minusHours(1))) {
             log.info("DB에서 댓글을 조회합니다. channelId={}", channelId);
-            return findCommentsFromDb(channelId);
+            return findCommentsFromDb(channelId, page, size);
         }
 
         log.info("유튜브 API를 통해 최신 정보를 동기화합니다. channelId={}", channelId);
 
-        Channel channel = channelOpt.orElse(null);
+        Channel channel = channelOpt.orElseGet(() -> youtubeApi.getChannelById(channelId));
 
         channel.setLastSelectAt(LocalDateTime.now());
         //기존 채널: 비디오/댓글 정보를 지우고 DB에 즉시 반영 (flush)
@@ -128,17 +133,34 @@ public class CommentService {
 
         channelRepository.save(channel);
 
-        return findCommentsFromDb(channelId);
+        return findCommentsFromDb(channelId, page, size);
     }
 
-    private List<CommentResponseDto> findCommentsFromDb(String channelId) {
+    private Page<CommentResponseDto> findCommentsFromDb(String channelId, int page, int size) {
 
-        log.info("findCommentsFromDb {}", channelId);
+        log.info("findCommentsFromDb {} page={} size={}", channelId, page, size);
 
-        return commentRepository.findByChannelOrderByLikeCount(channelId)
-                .stream()
-                .map(comment -> CommentResponseDto.builder().comment(comment).build())
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Comment> comments = commentRepository.findByChannelOrderByLikeCountDesc(channelId, pageable);
+        return comments.map(comment -> CommentResponseDto.builder().comment(comment).build());
+    }
+
+    @Transactional(readOnly = true)
+    public ChannelResponseDto getChannelDetails(String channelId) {
+        return channelRepository.findById(channelId)
+                .map(channel -> ChannelResponseDto.builder()
+                        .id(channel.getId())
+                        .name(channel.getName())
+                        .description(channel.getDescription())
+                        .thumbnailUrl(channel.getThumbnailUrl())
+                        .subscriberCount(channel.getSubscriberCount())
+                        .build())
+                .orElseThrow(() -> new RuntimeException("Channel not found: " + channelId));
+    }
+
+    public ReplyResponseDto getReplies(String commentId, String pageToken) {
+        return youtubeApi.getRepliesByComment(commentId, pageToken);
     }
 }
 
