@@ -1,7 +1,5 @@
 package youtube.youtube_api_practice.dto;
 
-import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 
 import java.util.ArrayList;
