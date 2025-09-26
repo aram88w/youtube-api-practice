@@ -21,9 +21,6 @@ public class Channel implements Persistable<String> {
     @Column(name = "channel_id")
     private String id;
 
-    @Transient
-    private boolean isNew = true;
-
     @Column(name = "uploads_playlist_id")
     private String uploadsPlaylistId;
 
@@ -76,10 +73,9 @@ public class Channel implements Persistable<String> {
         this.lastSelectAt = lastSelectAt;
     }
 
-    //==연관관계 편의 메서드==//
-    public void addVideo(Video video) {
-        videos.add(video);
-    }
+
+    @Transient
+    private boolean isNew = true;
 
     @Override
     public boolean isNew() {

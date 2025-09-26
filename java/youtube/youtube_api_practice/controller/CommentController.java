@@ -26,17 +26,9 @@ public class CommentController {
         return commentService.getChannelIds(search);
     }
 
-
     @GetMapping("/channel/detail/{channelId}")
     public ChannelResponseDto getChannelDetails(@PathVariable String channelId) {
         return commentService.getChannelDetails(channelId);
-    }
-
-    @GetMapping("/comments/{commentId}/replies")
-    public ReplyResponseDto getReplies(@PathVariable String commentId,
-                                       @RequestParam(required = false) String pageToken) {
-        log.info("getReplies for commentId {} with pageToken {}", commentId, pageToken);
-        return commentService.getReplies(commentId, pageToken);
     }
 
     @GetMapping("/comments/{channelId}")
@@ -45,5 +37,12 @@ public class CommentController {
                                                 @RequestParam(defaultValue = "10") int size) {
         log.info("getComments {} page={} size={}", channelId, page, size);
         return commentService.getComments(channelId, page, size);
+    }
+
+    @GetMapping("/comments/{commentId}/replies")
+    public ReplyResponseDto getReplies(@PathVariable String commentId,
+                                       @RequestParam(required = false) String pageToken) {
+        log.info("getReplies for commentId {} with pageToken {}", commentId, pageToken);
+        return commentService.getReplies(commentId, pageToken);
     }
 }

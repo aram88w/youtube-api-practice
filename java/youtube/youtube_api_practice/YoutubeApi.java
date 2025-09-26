@@ -32,7 +32,7 @@ public class YoutubeApi {
         this.apiKey = apiKey;
     }
 
-    // 검색어로 유튜브 채널 ID 5개 가져오기
+    // 검색어로 유튜브 채널 ID 10개 가져오기
     public List<String> getChannelIdsBySearch(String keyword) {
         log.info("getChannelsIdBySearch {}", keyword);
 
@@ -42,7 +42,7 @@ public class YoutubeApi {
                 .queryParam("part", "snippet")
                 .queryParam("q", keyword)
                 .queryParam("type", "channel")
-                .queryParam("maxResults", 5) // Fetch 3 results
+                .queryParam("maxResults", 10)
                 .queryParam("key", apiKey);
 
         JsonNode searchRoot = webClient.get()
@@ -97,8 +97,6 @@ public class YoutubeApi {
         JsonNode subsNode = item.path("statistics").path("subscriberCount");
         Long subscriberCount = subsNode.isMissingNode() || subsNode.asText().isEmpty() ? 0L : Long.parseLong(subsNode.asText());
 
-        log.info("description {}", description);
-
         return Channel.builder()
                 .id(channelId)
                 .uploadsPlaylistId(uploadsPlaylistId)
@@ -111,64 +109,128 @@ public class YoutubeApi {
                 .build();
     }
 
+    // 채널에서 최근 비디오 limit만큼 가져오기
+    public List<Video> getVideosByChannel(Channel channel, int limit) {
+        log.info("getVideosByChannel {}", channel);
+        List<Video> videos = new ArrayList<>();
 
-    // 채널에서 최근 비디오 id 50개 가져오기 (페이징)
-    public void getVideosByChannel(Channel channel) {
-        // 1. 채널의 공식 '업로드' 플레이리스트 ID를 사용합니다.
         String uploadsPlaylistId = channel.getUploadsPlaylistId();
+        String nextPageToken = null;
+        int remaining = limit;
 
-        // 2. 기존 /search 대신 /playlistItems 엔드포인트를 사용합니다.
-        UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/playlistItems")
-                .queryParam("part", "snippet") // snippet에 동영상 정보가 포함되어 있습니다.
-                .queryParam("playlistId", uploadsPlaylistId)
-                .queryParam("maxResults", 50)
-                .queryParam("key", apiKey);
+        do {
+            int maxResults = Math.min(remaining, 50); // 한 번에 가져올 수 있는 최대 50
+            UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/playlistItems")
+                    .queryParam("part", "snippet")
+                    .queryParam("playlistId", uploadsPlaylistId)
+                    .queryParam("maxResults", maxResults)
+                    .queryParam("key", apiKey);
 
-        JsonNode root = webClient.get()
-                .uri(uri.build().toUri())
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .block();
+            if (nextPageToken != null) {
+                uri.queryParam("pageToken", nextPageToken);
+            }
 
-        if (root == null || !root.has("items")) {
-            // 사용자 예외로 추후 변경
-            throw new RuntimeException("비디오가 없습니다");
-        }
+            JsonNode root = webClient.get()
+                    .uri(uri.build().toUri())
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
 
-        for (JsonNode item : root.get("items")) {
-            JsonNode snippet = item.path("snippet");
+            if (root == null || !root.has("items")) {
+                break;
+            }
 
-            // 3. playlistItems API의 응답 구조에 맞게 JSON 경로를 수정합니다.
-            String videoId = snippet.path("resourceId").path("videoId").asText();
-            String videoTitle = snippet.path("title").asText();
-            // 썸네일 경로가 다를 수 있으므로, 가장 안전한 high 퀄리티 썸네일을 가져오도록 수정
-            String videoThumbnail = snippet.path("thumbnails").path("high").path("url").asText();
-            LocalDateTime videoPublishedAt = OffsetDateTime
-                    .parse(snippet.path("publishedAt").asText())
-                    .toLocalDateTime();
+            for (JsonNode item : root.get("items")) {
+                JsonNode snippet = item.path("snippet");
+                String videoId = snippet.path("resourceId").path("videoId").asText();
+                String videoTitle = snippet.path("title").asText();
+                String videoThumbnail = snippet.path("thumbnails").path("high").path("url").asText();
+                LocalDateTime videoPublishedAt = OffsetDateTime
+                        .parse(snippet.path("publishedAt").asText())
+                        .toLocalDateTime();
 
-            Video video = Video.builder()
-                    .id(videoId)
-                    .title(videoTitle)
-                    .channel(channel)
-                    .thumbnailUrl(videoThumbnail)
-                    .publishedAt(videoPublishedAt)
-                    .build();
+                videos.add(Video.builder()
+                        .id(videoId)
+                        .title(videoTitle)
+                        .channel(channel)
+                        .thumbnailUrl(videoThumbnail)
+                        .publishedAt(videoPublishedAt)
+                        .build()
+                );
+            }
 
-            channel.addVideo(video);
-        }
+            remaining -= root.get("items").size();
+            nextPageToken = root.has("nextPageToken") ? root.path("nextPageToken").asText() : null;
+
+        } while (remaining > 0 && nextPageToken != null);
+
+        return videos;
     }
 
+
+
+//    // 채널에서 최근 비디오 id 50개 가져오기 (페이징)
+//    public List<Video> getVideosByChannel(Channel channel, int limit) {
+//        log.info("getVideosByChannel {}", channel);
+//        List<Video> videos = new ArrayList<>();
+//
+//        // 1. 채널의 공식 '업로드' 플레이리스트 ID를 사용합니다.
+//        String uploadsPlaylistId = channel.getUploadsPlaylistId();
+//
+//        // 2. 기존 /search 대신 /playlistItems 엔드포인트를 사용합니다.
+//        UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/playlistItems")
+//                .queryParam("part", "snippet") // snippet에 동영상 정보가 포함되어 있습니다.
+//                .queryParam("playlistId", uploadsPlaylistId)
+//                .queryParam("maxResults", limit)
+//                .queryParam("key", apiKey);
+//
+//        JsonNode root = webClient.get()
+//                .uri(uri.build().toUri())
+//                .retrieve()
+//                .bodyToMono(JsonNode.class)
+//                .block();
+//
+//        if (root == null || !root.has("items")) {
+//            // 사용자 예외로 추후 변경
+//            throw new RuntimeException("비디오가 없습니다");
+//        }
+//
+//        for (JsonNode item : root.get("items")) {
+//            JsonNode snippet = item.path("snippet");
+//
+//            // 3. playlistItems API의 응답 구조에 맞게 JSON 경로를 수정합니다.
+//            String videoId = snippet.path("resourceId").path("videoId").asText();
+//            String videoTitle = snippet.path("title").asText();
+//            // 썸네일 경로가 다를 수 있으므로, 가장 안전한 high 퀄리티 썸네일을 가져오도록 수정
+//            String videoThumbnail = snippet.path("thumbnails").path("high").path("url").asText();
+//            LocalDateTime videoPublishedAt = OffsetDateTime
+//                    .parse(snippet.path("publishedAt").asText())
+//                    .toLocalDateTime();
+//
+//            Video video = Video.builder()
+//                    .id(videoId)
+//                    .title(videoTitle)
+//                    .channel(channel)
+//                    .thumbnailUrl(videoThumbnail)
+//                    .publishedAt(videoPublishedAt)
+//                    .build();
+//
+//            videos.add(video);
+//        }
+//        return videos;
+//    }
+
     //비디오의 최상위 댓글들 모두 가져오기 (페이징, maxResults 최대 100)
-    public void getCommentsByVideo(Video video) {
+    public List<Comment> getCommentsByVideo(Video video, int limit) {
         log.info("getCommentsByVideo {}", video);
+        List<Comment> comments = new ArrayList<>();
 
         String videoId = video.getId();
 
         UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/commentThreads")
                 .queryParam("part", "snippet")
                 .queryParam("videoId", videoId)
-                .queryParam("maxResults", 10)            // 상위 10개
+                .queryParam("maxResults", limit)            // 상위 10개
                 .queryParam("order", "relevance")      // 좋아요/추천 위주
                 .queryParam("key", apiKey);
 
@@ -180,7 +242,7 @@ public class YoutubeApi {
                     .block();
 
             if (root == null || !root.has("items")) {
-                return; // 댓글이 없는 경우
+                return comments; // 댓글이 없는 경우
             }
 
             for (JsonNode item : root.get("items")) {
@@ -209,13 +271,14 @@ public class YoutubeApi {
                         .video(video)
                         .build();
 
-                video.addComment(comment);
+                comments.add(comment);
             }
         } catch (WebClientResponseException.Forbidden e) {
             log.warn("댓글이 비활성화된 동영상입니다. videoId={}, 응답 본문: {}", videoId, e.getResponseBodyAsString());
         } catch (Exception e) {
             log.error("댓글을 가져오는 중 오류가 발생했습니다. videoId={}", videoId, e);
         }
+        return comments;
     }
 
     // 대댓글 가져오기

@@ -28,7 +28,6 @@ public class SearchCache {
     private LocalDateTime lastSearchedAt;
 
 
-
     @Transient
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
