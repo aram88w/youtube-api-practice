@@ -15,7 +15,7 @@ public class ReplyCommentDto {
     private final LocalDateTime createdAt;
 
     @Builder
-    public ReplyCommentDto(String name, String ThumbnailUrl, String content, LocalDateTime publishedAt, int likeCount, LocalDateTime createdAt) {
+    public ReplyCommentDto(String name, String ThumbnailUrl, String content, int likeCount, LocalDateTime createdAt) {
         this.name = name;
         this.ThumbnailUrl = ThumbnailUrl;
         this.content = content;

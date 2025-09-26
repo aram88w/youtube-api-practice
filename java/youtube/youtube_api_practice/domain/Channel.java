@@ -59,18 +59,17 @@ public class Channel implements Persistable<String> {
         this.subscriberCount = subscriberCount;
     }
 
-    public void updateChannelInfo(String name, String description, String thumbnailUrl,
-                                  String uploadsPlaylistId, LocalDateTime lastSelectAt, Long subscriberCount) {
-        this.name = name;
-        this.description = description;
-        this.thumbnailUrl = thumbnailUrl;
-        this.lastSelectAt = lastSelectAt;
-        this.uploadsPlaylistId = uploadsPlaylistId;
-        this.subscriberCount = subscriberCount;
-    }
 
     public void setLastSelectAt(LocalDateTime lastSelectAt) {
         this.lastSelectAt = lastSelectAt;
+    }
+
+    public void incrementSearchCount() {
+        this.searchCount++;
+    }
+
+    public void setSearchCount(int searchCount) {
+        this.searchCount = searchCount;
     }
 
 

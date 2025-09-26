@@ -11,4 +11,9 @@ public interface ChannelRepository extends JpaRepository<Channel, String>, Chann
 
     // channelId 가 주어진 Set 안에 포함된 Channel들을 반환
     List<Channel> findByIdInOrderBySubscriberCountDesc(Set<String> channelIds);
+
+    // === 새로 추가될 메서드 시작 ===
+    // search_count 기준으로 상위 10개 채널을 가져오는 메서드
+    List<Channel> findTop10ByOrderBySearchCountDesc();
+    // === 새로 추가될 메서드 끝 ===
 }
