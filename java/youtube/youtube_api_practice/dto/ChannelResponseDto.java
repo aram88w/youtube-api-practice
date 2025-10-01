@@ -42,9 +42,4 @@ public class ChannelResponseDto {
         return result;
     }
 
-    public static List<ChannelResponseDto> sortBySubscriberCountDesc(List<ChannelResponseDto> channels) {
-        channels.sort(Comparator.comparing(ChannelResponseDto::getSubscriberCount, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
-        return channels;
-    }
-
 }

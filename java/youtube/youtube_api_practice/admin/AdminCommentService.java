@@ -27,6 +27,10 @@ public class AdminCommentService {
 
     @Transactional
     public void update(String ChannelId, int videoLimit, int commentLimit) {
+        log.info("update started ChannelId={}, videoLimit={}, commentLimit={}", ChannelId, videoLimit, commentLimit);
+
+        long start = System.currentTimeMillis();
+
         Channel newChannel = youtubeApi.getChannelById(ChannelId);
         newChannel.setLastSelectAt(LocalDateTime.now());
         channelRepository.upsertChannel(newChannel);
@@ -38,6 +42,35 @@ public class AdminCommentService {
             List<Comment> comments = youtubeApi.getCommentsByVideo(video, commentLimit);
             commentRepository.upsertComments(comments);
         }
+
+        long end = System.currentTimeMillis();
+        long elapsed = end - start; // 밀리초
+
+        double seconds = elapsed / 1000.0; // 초 단위로 변환
+        log.info("걸린 시간: {}초", seconds);
+    }
+
+
+    public void allUpdate() {
+        log.info("allUpdate started");
+
+        long start = System.currentTimeMillis();
+
+        List<Channel> channels = channelRepository.findBySubscriberCountGreaterThanEqual(10000L);
+        for (Channel channel : channels) {
+            update(channel.getId(), 300, 30);
+        }
+
+        long end = System.currentTimeMillis();
+        long elapsed = end - start; // 밀리초
+
+        double seconds = elapsed / 1000.0; // 초 단위로 변환
+        log.info("걸린 시간: {}초", seconds);
     }
 
 }
+
+/**
+ * 채널 1 + 비디오 100 + 댓글 30 = 131
+ * 채널 70개 = 8000
+ */

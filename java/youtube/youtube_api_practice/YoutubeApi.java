@@ -230,7 +230,7 @@ public class YoutubeApi {
         UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/commentThreads")
                 .queryParam("part", "snippet")
                 .queryParam("videoId", videoId)
-                .queryParam("maxResults", limit)            // 상위 10개
+                .queryParam("maxResults", limit)
                 .queryParam("order", "relevance")      // 좋아요/추천 위주
                 .queryParam("key", apiKey);
 

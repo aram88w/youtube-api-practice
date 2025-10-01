@@ -21,17 +21,6 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    @GetMapping("/channel/{search}")
-    public List<ChannelResponseDto> getChannels(@PathVariable String search) {
-        log.info("getChannels {}", search);
-        return commentService.getChannelIds(search);
-    }
-
-    @GetMapping("/channel/detail/{channelId}")
-    public ChannelResponseDto getChannelDetails(@PathVariable String channelId) {
-        return commentService.getChannelDetails(channelId);
-    }
-
     // /youtube/api/comments/UCUj6rrhMTR9pipbAWBAMvUQ
     @GetMapping("/comments/{channelId}")
     public Page<CommentResponseDto> getComments(@PathVariable String channelId,
@@ -49,11 +38,4 @@ public class CommentController {
         return commentService.getReplies(commentId, pageToken);
     }
 
-    // === 새로 추가될 메서드 시작 ===
-    @GetMapping("/top-channels")
-    public List<ChannelResponseDto> getTopChannels() {
-        log.info("getTopChannels request received.");
-        return commentService.getTopChannels();
-    }
-    // === 새로 추가될 메서드 끝 ===
 }
