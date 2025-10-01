@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import youtube.youtube_api_practice.YoutubeApi;
+import youtube.youtube_api_practice.client.YoutubeApi;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.SearchCache;
 import youtube.youtube_api_practice.dto.ChannelResponseDto;
@@ -13,8 +13,11 @@ import youtube.youtube_api_practice.repository.channel.ChannelRepository;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import org.springframework.scheduling.annotation.Async;
 
 @Slf4j
 @Service
@@ -26,8 +29,9 @@ public class ChannelService {
     private final SearchCacheRepository searchCacheRepository;
 
 
+    @Async
     @Transactional
-    public List<ChannelResponseDto> getChannelIds(String search) {
+    public CompletableFuture<List<ChannelResponseDto>> getChannelIds(String search) {
         log.info("getChannelIds {}", search);
 
         // 1. DB에서 검색어 캐시 조회
@@ -62,7 +66,7 @@ public class ChannelService {
 
         // 3. 캐시에서 채널 ID 가져와 DB 조회
         List<Channel> channels = channelRepository.findByIdInOrderBySubscriberCountDesc(cache.getChannelIds());
-        return ChannelResponseDto.ChannelToDto(channels);
+        return CompletableFuture.completedFuture(ChannelResponseDto.ChannelToDto(channels));
     }
 
     public void saveChannels(Set<String> channelIds) {
@@ -79,7 +83,7 @@ public class ChannelService {
 
             // 3. 기존 채널 정보가 있으면 lastSelectAt과 searchCount 값을 유지
             if (existingChannel != null) {
-                newChannel.setLastSelectAt(existingChannel.getLastSelectAt());
+                newChannel.setLastSelectAt(existingChannel.getLastSelectedAt());
                 newChannel.setSearchCount(existingChannel.getSearchCount());
             }
 

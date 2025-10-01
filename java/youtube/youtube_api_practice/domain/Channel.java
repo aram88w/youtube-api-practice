@@ -37,7 +37,7 @@ public class Channel implements Persistable<String> {
     private int searchCount;
 
     @Column(name = "last_selected_at")
-    private LocalDateTime lastSelectAt;
+    private LocalDateTime lastSelectedAt;
 
     @Column(name = "thumbnail_url", columnDefinition = "TEXT")
     private String thumbnailUrl;
@@ -48,20 +48,20 @@ public class Channel implements Persistable<String> {
 
     @Builder
     public Channel(String id, String uploadsPlaylistId, String name, String description, int searchCount,
-                   LocalDateTime lastSelectAt, String thumbnailUrl, Long subscriberCount) {
+                   LocalDateTime lastSelectedAt, String thumbnailUrl, Long subscriberCount) {
         this.id = id;
         this.uploadsPlaylistId = uploadsPlaylistId;
         this.name = name;
         this.description = description;
         this.searchCount = searchCount;
-        this.lastSelectAt = lastSelectAt;
+        this.lastSelectedAt = lastSelectedAt;
         this.thumbnailUrl = thumbnailUrl;
         this.subscriberCount = subscriberCount;
     }
 
 
-    public void setLastSelectAt(LocalDateTime lastSelectAt) {
-        this.lastSelectAt = lastSelectAt;
+    public void setLastSelectAt(LocalDateTime lastSelectedAt) {
+        this.lastSelectedAt = lastSelectedAt;
     }
 
     public void incrementSearchCount() {

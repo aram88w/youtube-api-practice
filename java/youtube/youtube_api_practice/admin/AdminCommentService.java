@@ -3,8 +3,10 @@ package youtube.youtube_api_practice.admin;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import youtube.youtube_api_practice.YoutubeApi;
+import youtube.youtube_api_practice.client.YoutubeApi;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.Video;
@@ -51,14 +53,16 @@ public class AdminCommentService {
     }
 
 
-    public void allUpdate() {
+    public void allUpdate(int limit) {
         log.info("allUpdate started");
 
         long start = System.currentTimeMillis();
 
-        List<Channel> channels = channelRepository.findBySubscriberCountGreaterThanEqual(10000L);
+        Pageable pageable = PageRequest.of(0, limit);
+
+        List<Channel> channels = channelRepository.findTopChannels(10000L, pageable);
         for (Channel channel : channels) {
-            update(channel.getId(), 300, 30);
+            update(channel.getId(), 100, 30);
         }
 
         long end = System.currentTimeMillis();
@@ -72,5 +76,6 @@ public class AdminCommentService {
 
 /**
  * 채널 1 + 비디오 100 + 댓글 30 = 131
+ * 채널 10개 = 1300
  * 채널 70개 = 8000
  */

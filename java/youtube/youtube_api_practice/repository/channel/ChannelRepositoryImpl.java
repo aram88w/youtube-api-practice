@@ -36,7 +36,7 @@ public class ChannelRepositoryImpl implements ChannelJdbcRepository {
                 channel.getSubscriberCount(),
                 channel.getDescription(),
                 channel.getUploadsPlaylistId(),
-                channel.getLastSelectAt()
+                channel.getLastSelectedAt()
         );
     }
 

@@ -10,6 +10,7 @@ import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.service.ChannelService;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RequestMapping("/youtube/api")
@@ -20,7 +21,7 @@ public class ChannelController {
     private final ChannelService channelService;
 
     @GetMapping("/channel/{search}")
-    public List<ChannelResponseDto> getChannels(@PathVariable String search) {
+    public CompletableFuture<List<ChannelResponseDto>> getChannels(@PathVariable String search) {
         log.info("getChannels {}", search);
         return channelService.getChannelIds(search);
     }

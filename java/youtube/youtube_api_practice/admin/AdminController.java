@@ -20,7 +20,7 @@ public class AdminController {
         return "Hello World!";
     }
 
-    // http://localhost:8080/admin/update/UCUj6rrhMTR9pipbAWBAMvUQ?videoLimit=100&commentLimit=30
+    // http://localhost:8080/admin/update/UC2jkfOUD5KNbIpkb77-chqQ?videoLimit=100&commentLimit=30
     @GetMapping("/admin/update/{channelId}")
     public ResponseEntity<String> update(@PathVariable String channelId,
                                          @RequestParam(defaultValue = "100") int videoLimit,
@@ -32,8 +32,8 @@ public class AdminController {
     }
 
     @GetMapping("/admin/allupdate")
-    public ResponseEntity<String> allUpdate() {
-        commentService.allUpdate();
+    public ResponseEntity<String> allUpdate(@RequestParam int limit) {
+        commentService.allUpdate(limit);
 
         return ResponseEntity.ok("Update started for allUpdate");
     }

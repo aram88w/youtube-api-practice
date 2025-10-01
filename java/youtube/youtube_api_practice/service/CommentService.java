@@ -4,12 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import youtube.youtube_api_practice.YoutubeApi;
+import youtube.youtube_api_practice.client.YoutubeApi;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
-import youtube.youtube_api_practice.domain.SearchCache;
 import youtube.youtube_api_practice.domain.Video;
-import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.dto.CommentResponseDto;
 import youtube.youtube_api_practice.dto.ReplyResponseDto;
 import youtube.youtube_api_practice.repository.Video.VideoRepository;
@@ -19,17 +17,18 @@ import youtube.youtube_api_practice.repository.SearchCacheRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.function.Function;
-import java.util.concurrent.ConcurrentHashMap; // 새로 추가
-import java.util.concurrent.Executors;       // 새로 추가
-import java.util.concurrent.ScheduledExecutorService; // 새로 추가
-import java.util.concurrent.TimeUnit;        // 새로 추가
-import jakarta.annotation.PostConstruct;      // 새로 추가
-import jakarta.servlet.http.HttpServletRequest; // 새로 추가 (getComments 메서드 파라미터용)
-import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;       
+import java.util.concurrent.ScheduledExecutorService; 
+import java.util.concurrent.TimeUnit;        
+import jakarta.annotation.PostConstruct;      
+import jakarta.servlet.http.HttpServletRequest;
 
 @Slf4j
 @Service
@@ -60,9 +59,12 @@ public class CommentService {
     }
 
 
+    @Async
     @Transactional
-    public Page<CommentResponseDto> getComments(String channelId, int page, int size, HttpServletRequest request) { // HttpServletRequest 추가
+    public CompletableFuture<Page<CommentResponseDto>> getComments(String channelId, int page, int size, HttpServletRequest request) { 
         log.info("getComments {} page={} size={}", channelId, page, size);
+
+        long start = System.currentTimeMillis();
 
         String clientIp = request.getRemoteAddr(); // 클라이언트 IP 주소 가져오기
 
@@ -70,7 +72,7 @@ public class CommentService {
         Optional<Channel> channelOpt = channelRepository.findById(channelId);
         Channel channel;
 
-        if (channelOpt.isEmpty() || channelOpt.get().getLastSelectAt() == null) {
+        if (channelOpt.isEmpty() || channelOpt.get().getLastSelectedAt() == null) {
             // 2a. 동기화가 필요한 경우 (채널이 없거나, 첫 댓글 조회)
             log.info("유튜브 API를 통해 최신 정보를 동기화합니다. channelId={}", channelId);
 
@@ -86,11 +88,11 @@ public class CommentService {
 
             channelRepository.upsertChannel(channel);
 
-            List<Video> videos = youtubeApi.getVideosByChannel(channel, 50);
+            List<Video> videos = youtubeApi.getVideosByChannel(channel, 33);
             videoRepository.upsertVideos(videos);
 
             for (Video video : videos) {
-                List<Comment> comments = youtubeApi.getCommentsByVideo(video, 10);
+                List<Comment> comments = youtubeApi.getCommentsByVideo(video, 30);
                 commentRepository.upsertComments(comments);
             }
         } else {
@@ -102,7 +104,13 @@ public class CommentService {
             // @Transactional에 의해 메서드 종료 시 변경 감지(dirty checking)로 DB에 자동 반영됨
         }
 
-        return findCommentsFromDb(channelId, page, size);
+        long end = System.currentTimeMillis();
+        long elapsed = end - start; // 밀리초
+
+        double seconds = elapsed / 1000.0; // 초 단위로 변환
+        log.info("걸린 시간: {}초", seconds);
+
+        return CompletableFuture.completedFuture(findCommentsFromDb(channelId, page, size));
     }
 
 
@@ -131,7 +139,9 @@ public class CommentService {
     }
 
 
+    @Cacheable("replies")
     public ReplyResponseDto getReplies(String commentId, String pageToken) {
+        log.info("getReplies {} pageToken={}", commentId, pageToken);
         return youtubeApi.getRepliesByComment(commentId, pageToken);
     }
 

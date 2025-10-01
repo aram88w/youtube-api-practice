@@ -4,13 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
-import youtube.youtube_api_practice.YoutubeApi;
-import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.dto.CommentResponseDto;
 import youtube.youtube_api_practice.dto.ReplyResponseDto;
 import youtube.youtube_api_practice.service.CommentService;
 
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import jakarta.servlet.http.HttpServletRequest; // 새로 추가
 
 @Slf4j
@@ -23,11 +22,12 @@ public class CommentController {
 
     // /youtube/api/comments/UCUj6rrhMTR9pipbAWBAMvUQ
     @GetMapping("/comments/{channelId}")
-    public Page<CommentResponseDto> getComments(@PathVariable String channelId,
+    public CompletableFuture<Page<CommentResponseDto>> getComments(@PathVariable String channelId,
                                                 @RequestParam(defaultValue = "0") int page,
                                                 @RequestParam(defaultValue = "10") int size,
                                                 HttpServletRequest request) { // HttpServletRequest 파라미터 추가
         log.info("getComments {} page={} size={}", channelId, page, size);
+
         return commentService.getComments(channelId, page, size, request); // service 메서드 호출 시 request 전달
     }
 
