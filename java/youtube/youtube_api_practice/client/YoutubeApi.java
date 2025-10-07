@@ -10,6 +10,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
+import youtube.youtube_api_practice.domain.CommentStatus;
 import youtube.youtube_api_practice.domain.Video;
 import youtube.youtube_api_practice.dto.ReplyCommentDto;
 import youtube.youtube_api_practice.dto.ReplyResponseDto;
@@ -23,13 +24,12 @@ import java.util.List;
 @Component
 public class YoutubeApi {
 
-    public static final String BASE = "https://www.googleapis.com/youtube/v3";
 
     private final WebClient webClient;
     private final String apiKey;
 
-    public YoutubeApi(WebClient.Builder webClientBuilder, @Value("${youtube.api.key}") String apiKey) {
-        this.webClient = webClientBuilder.baseUrl(BASE).build();
+    public YoutubeApi(WebClient youtubeWebClient, @Value("${youtube.api.key}") String apiKey) {
+        this.webClient = youtubeWebClient;
         this.apiKey = apiKey;
     }
 
@@ -39,15 +39,15 @@ public class YoutubeApi {
 
         List<String> channelIds = new ArrayList<>();
 
-        UriComponentsBuilder searchUri = UriComponentsBuilder.fromUriString(BASE + "/search")
-                .queryParam("part", "snippet")
-                .queryParam("q", keyword)
-                .queryParam("type", "channel")
-                .queryParam("maxResults", 10)
-                .queryParam("key", apiKey);
-
         JsonNode searchRoot = webClient.get()
-                .uri(searchUri.build().encode().toUri())
+                .uri(uriBuilder -> uriBuilder
+                        .path("/search")
+                        .queryParam("part", "snippet")
+                        .queryParam("q", keyword)
+                        .queryParam("type", "channel")
+                        .queryParam("maxResults", 10)
+                        .queryParam("key", apiKey)
+                        .build())
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .block();
@@ -73,15 +73,15 @@ public class YoutubeApi {
     public Mono<List<String>> getChannelIdsBySearchAsync(String keyword) {
         log.info("getChannelsIdBySearchAsync {}", keyword);
 
-        UriComponentsBuilder searchUri = UriComponentsBuilder.fromUriString(BASE + "/search")
-                .queryParam("part", "snippet")
-                .queryParam("q", keyword)
-                .queryParam("type", "channel")
-                .queryParam("maxResults", 10)
-                .queryParam("key", apiKey);
-
         return webClient.get()
-                .uri(searchUri.build().encode().toUri())
+                .uri(uriBuilder -> uriBuilder
+                        .path("/search")
+                        .queryParam("part", "snippet")
+                        .queryParam("q", keyword)
+                        .queryParam("type", "channel")
+                        .queryParam("maxResults", 10)
+                        .queryParam("key", apiKey)
+                        .build())
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .flatMap(searchRoot -> {
@@ -104,13 +104,13 @@ public class YoutubeApi {
     public Channel getChannelById(String channelId) {
         log.info("getChannelById {}", channelId);
 
-        UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/channels")
-                .queryParam("part", "snippet,contentDetails,statistics")
-                .queryParam("id", channelId)
-                .queryParam("key", apiKey);
-
         JsonNode root = webClient.get()
-                .uri(uri.build().encode().toUri())
+                .uri(uriBuilder -> uriBuilder
+                        .path("/channels")
+                        .queryParam("part", "snippet,contentDetails,statistics")
+                        .queryParam("id", channelId)
+                        .queryParam("key", apiKey)
+                        .build())
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .block();
@@ -138,6 +138,7 @@ public class YoutubeApi {
 //                .lastSelectAt(LocalDateTime.now())
                 .thumbnailUrl(thumbnailUrl)
                 .subscriberCount(subscriberCount)
+                .commentStatus(CommentStatus.COMMENT_NONE)
                 .build();
     }
 
@@ -152,18 +153,22 @@ public class YoutubeApi {
 
         do {
             int maxResults = Math.min(remaining, 50); // 한 번에 가져올 수 있는 최대 50
-            UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/playlistItems")
-                    .queryParam("part", "snippet")
-                    .queryParam("playlistId", uploadsPlaylistId)
-                    .queryParam("maxResults", maxResults)
-                    .queryParam("key", apiKey);
-
-            if (nextPageToken != null) {
-                uri.queryParam("pageToken", nextPageToken);
-            }
+            final String currentPageToken = nextPageToken;
 
             JsonNode root = webClient.get()
-                    .uri(uri.build().toUri())
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/playlistItems")
+                                .queryParam("part", "snippet")
+                                .queryParam("playlistId", uploadsPlaylistId)
+                                .queryParam("maxResults", maxResults)
+                                .queryParam("key", apiKey);
+
+                        if (currentPageToken != null) {
+                            uriBuilder.queryParam("pageToken", currentPageToken);
+                        }
+
+                        return uriBuilder.build();
+                    })
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();
@@ -208,16 +213,16 @@ public class YoutubeApi {
 
         String videoId = video.getId();
 
-        UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/commentThreads")
-                .queryParam("part", "snippet")
-                .queryParam("videoId", videoId)
-                .queryParam("maxResults", limit)
-                .queryParam("order", "relevance")      // 좋아요/추천 위주
-                .queryParam("key", apiKey);
-
         try {
             JsonNode root = webClient.get()
-                    .uri(uri.build().toUri())
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/commentThreads")
+                            .queryParam("part", "snippet")
+                            .queryParam("videoId", videoId)
+                            .queryParam("maxResults", limit)
+                            .queryParam("order", "relevance")      // 좋아요/추천 위주
+                            .queryParam("key", apiKey)
+                            .build())
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();
@@ -266,18 +271,20 @@ public class YoutubeApi {
     public ReplyResponseDto getRepliesByComment(String commentId, String pageToken) {
         log.info("getRepliesByComment {} pageToken {}", commentId, pageToken);
 
-        UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(BASE + "/comments")
-                .queryParam("part", "snippet")
-                .queryParam("parentId", commentId)
-                .queryParam("maxResults", 10)
-                .queryParam("key", apiKey);
-
-        if (pageToken != null && !pageToken.isEmpty()) {
-            uri.queryParam("pageToken", pageToken);
-        }
-
         JsonNode root = webClient.get()
-                .uri(uri.build().toUri())
+                .uri(uriBuilder -> {
+                    uriBuilder.path("/comments")
+                            .queryParam("part", "snippet")
+                            .queryParam("parentId", commentId)
+                            .queryParam("maxResults", 10)
+                            .queryParam("key", apiKey);
+
+                    if (pageToken != null) {
+                        uriBuilder.queryParam("pageToken", pageToken);
+                    }
+
+                    return uriBuilder.build();
+                })
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .block();

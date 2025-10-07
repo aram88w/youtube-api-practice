@@ -69,6 +69,7 @@ public class ChannelService {
         return CompletableFuture.completedFuture(ChannelResponseDto.ChannelToDto(channels));
     }
 
+
     public void saveChannels(Set<String> channelIds) {
         log.info("saveChannels {}", channelIds);
 
@@ -81,10 +82,11 @@ public class ChannelService {
             Channel newChannel = youtubeApi.getChannelById(channelId);
             Channel existingChannel = existingChannelMap.get(channelId);
 
-            // 3. 기존 채널 정보가 있으면 lastSelectAt과 searchCount 값을 유지
+            // 3. 기존 채널 정보가 있으면 lastSelectAt, searchCount, commentStatus 값을 유지
             if (existingChannel != null) {
                 newChannel.setLastSelectAt(existingChannel.getLastSelectedAt());
                 newChannel.setSearchCount(existingChannel.getSearchCount());
+                newChannel.setCommentStatus(existingChannel.getCommentStatus());
             }
 
             channelRepository.upsertChannel(newChannel);
@@ -100,6 +102,7 @@ public class ChannelService {
                         .description(channel.getDescription())
                         .thumbnailUrl(channel.getThumbnailUrl())
                         .subscriberCount(channel.getSubscriberCount())
+                        .commentStatus(channel.getCommentStatus())
                         .build())
                 .orElseThrow(() -> new RuntimeException("Channel not found: " + channelId));
     }

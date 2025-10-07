@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.domain.Persistable;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -16,7 +17,7 @@ import java.util.Set;
 @Getter
 @Setter
 @NoArgsConstructor
-public class SearchCache {
+public class SearchCache implements Persistable<String> {
 
     @Id
     private String keyword;
@@ -30,6 +31,25 @@ public class SearchCache {
 
     @Transient
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Transient
+    private boolean isNew = true;
+
+    @Override
+    public String getId() {
+        return keyword;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNew = false;
+    }
 
 
     // JSON -> Set<String> 변환

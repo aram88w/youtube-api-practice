@@ -3,9 +3,9 @@ package youtube.youtube_api_practice.dto;
 import lombok.Builder;
 import lombok.Getter;
 import youtube.youtube_api_practice.domain.Channel;
+import youtube.youtube_api_practice.domain.CommentStatus;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 @Getter
@@ -16,14 +16,16 @@ public class ChannelResponseDto {
     private final String description;
     private final String thumbnailUrl;
     private final Long subscriberCount;
+    private final CommentStatus commentStatus;
 
     @Builder
-    public ChannelResponseDto(String id, String name, String description, String thumbnailUrl, Long subscriberCount) {
+    public ChannelResponseDto(String id, String name, String description, String thumbnailUrl, Long subscriberCount, CommentStatus commentStatus) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.thumbnailUrl = thumbnailUrl;
         this.subscriberCount = subscriberCount;
+        this.commentStatus = commentStatus;
     }
 
     // List<Channel> -> List<ChannelResponseDto> 변환
@@ -37,6 +39,7 @@ public class ChannelResponseDto {
                     .description(channel.getDescription())
                     .thumbnailUrl(channel.getThumbnailUrl())
                     .subscriberCount(channel.getSubscriberCount())
+                    .commentStatus(channel.getCommentStatus())
                     .build());
         }
         return result;

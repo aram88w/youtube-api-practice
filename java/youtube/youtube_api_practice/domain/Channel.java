@@ -45,10 +45,14 @@ public class Channel implements Persistable<String> {
     @Column(name = "subscriber_count")
     private Long subscriberCount; // 구독자 수
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "comment_status", nullable = false, length = 50)
+    private CommentStatus commentStatus = CommentStatus.COMMENT_NONE;
+
 
     @Builder
     public Channel(String id, String uploadsPlaylistId, String name, String description, int searchCount,
-                   LocalDateTime lastSelectedAt, String thumbnailUrl, Long subscriberCount) {
+                   LocalDateTime lastSelectedAt, String thumbnailUrl, Long subscriberCount, CommentStatus commentStatus) {
         this.id = id;
         this.uploadsPlaylistId = uploadsPlaylistId;
         this.name = name;
@@ -57,6 +61,7 @@ public class Channel implements Persistable<String> {
         this.lastSelectedAt = lastSelectedAt;
         this.thumbnailUrl = thumbnailUrl;
         this.subscriberCount = subscriberCount;
+        this.commentStatus = commentStatus;
     }
 
 
@@ -72,6 +77,9 @@ public class Channel implements Persistable<String> {
         this.searchCount = searchCount;
     }
 
+    public void setCommentStatus(CommentStatus commentStatus) {
+        this.commentStatus = commentStatus;
+    }
 
     @Transient
     private boolean isNew = true;

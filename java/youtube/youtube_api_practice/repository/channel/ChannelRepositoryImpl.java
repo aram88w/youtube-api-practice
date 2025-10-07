@@ -4,11 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import youtube.youtube_api_practice.domain.Channel;
-import youtube.youtube_api_practice.dto.ChannelResponseDto;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -18,16 +16,19 @@ public class ChannelRepositoryImpl implements ChannelJdbcRepository {
 
     public void upsertChannel(Channel channel) {
         String sql = """
-            INSERT INTO channel (channel_id, channel_name, thumbnail_url, subscriber_count, description, uploads_playlist_id, last_selected_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                channel_name = VALUES(channel_name),
-                thumbnail_url = VALUES(thumbnail_url),
-                subscriber_count = VALUES(subscriber_count),
-                description = VALUES(description),
-                uploads_playlist_id = VALUES(uploads_playlist_id),
-                last_selected_at = VALUES(last_selected_at)
-        """;
+        INSERT INTO channel 
+        (channel_id, channel_name, thumbnail_url, subscriber_count, description, uploads_playlist_id, last_selected_at, search_count, comment_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            channel_name = VALUES(channel_name),
+            thumbnail_url = VALUES(thumbnail_url),
+            subscriber_count = VALUES(subscriber_count),
+            description = VALUES(description),
+            uploads_playlist_id = VALUES(uploads_playlist_id),
+            last_selected_at = VALUES(last_selected_at),
+            search_count = VALUES(search_count),
+            comment_status = VALUES(comment_status)
+    """;
 
         jdbcTemplate.update(sql,
                 channel.getId(),
@@ -36,9 +37,12 @@ public class ChannelRepositoryImpl implements ChannelJdbcRepository {
                 channel.getSubscriberCount(),
                 channel.getDescription(),
                 channel.getUploadsPlaylistId(),
-                channel.getLastSelectedAt()
+                channel.getLastSelectedAt(),
+                channel.getSearchCount(),
+                channel.getCommentStatus().name() // Enum → String
         );
     }
+
 
     private final RowMapper<Channel> channelRowMapper = new RowMapper<>() {
         @Override

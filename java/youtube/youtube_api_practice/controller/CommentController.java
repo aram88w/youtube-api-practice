@@ -31,6 +31,12 @@ public class CommentController {
         return commentService.getComments(channelId, page, size, request); // service 메서드 호출 시 request 전달
     }
 
+    @GetMapping("/comments/{channelId}/moreComments")
+    public CompletableFuture<Page<CommentResponseDto>> getMoreComments(@PathVariable String channelId) {
+        log.info("getMoreComments {}", channelId);
+        return commentService.getMoreComments(channelId);
+    }
+
     @GetMapping("/comments/{commentId}/replies")
     public ReplyResponseDto getReplies(@PathVariable String commentId,
                                        @RequestParam(required = false) String pageToken) {
