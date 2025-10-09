@@ -28,11 +28,13 @@ public class ChannelController {
 
     @GetMapping("/channel/detail/{channelId}")
     public ChannelResponseDto getChannelDetails(@PathVariable String channelId) {
+        log.info("getChannelDetails {}", channelId);
         return channelService.getChannelDetails(channelId);
     }
 
     @GetMapping("/channel/recommendations")
     public List<ChannelResponseDto> recommendChannels() {
+        log.info("recommendChannels");
         return channelService.findRandomChannels();
     }
 

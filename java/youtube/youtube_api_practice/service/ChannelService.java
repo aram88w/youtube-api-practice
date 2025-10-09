@@ -95,6 +95,7 @@ public class ChannelService {
 
     @Transactional(readOnly = true)
     public ChannelResponseDto getChannelDetails(String channelId) {
+        log.info("getChannelDetails {}", channelId);
         return channelRepository.findById(channelId)
                 .map(channel -> ChannelResponseDto.builder()
                         .id(channel.getId())
@@ -110,6 +111,7 @@ public class ChannelService {
 
     @Transactional(readOnly = true)
     public List<ChannelResponseDto> findRandomChannels() {
+        log.info("findRandomChannels");
         List<Channel> channels = channelRepository.findRandomTopChannels();
 
         return ChannelResponseDto.ChannelToDto(channels);
