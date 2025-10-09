@@ -2,6 +2,7 @@ package youtube.youtube_api_practice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import youtube.youtube_api_practice.client.YoutubeApi;
@@ -28,6 +29,7 @@ public class ChannelService {
     private final ChannelRepository channelRepository;
     private final SearchCacheRepository searchCacheRepository;
 
+    private final LevenshteinDistance ld = new LevenshteinDistance();
 
     @Async
     @Transactional
@@ -38,32 +40,46 @@ public class ChannelService {
         Optional<SearchCache> cacheOpt = searchCacheRepository.findById(search);
         SearchCache cache;
 
+
+        // 2-1. 처음 검색하는 검색어인 경우
         if (cacheOpt.isEmpty()) {
-            // 2-1. 처음 검색하면 유튜브 API로 가져와서 저장
-            Set<String> channelIds = new HashSet<>(youtubeApi.getChannelIdsBySearch(search));
-            cache = new SearchCache();
-            cache.setKeyword(search);
-            cache.setLastSearchedAt(LocalDateTime.now());
-            cache.setChannelIds(channelIds);
+            Optional<SearchCache> similarCacheOpt = searchCacheRepository.findAll().stream()
+                    .filter(sc -> isSimilar(sc.getKeyword(), search))
+                    .findFirst();
 
-            searchCacheRepository.save(cache);
-            saveChannels(channelIds);
-
-        } else {
-            cache = cacheOpt.get();
-
-            // 2-2. 마지막 갱신이 오래되었으면 API로 갱신
-            if (cache.getLastSearchedAt().isBefore(LocalDateTime.now().minusHours(100))) {
-                Set<String> channelIds = cache.getChannelIds();
-                channelIds.addAll(youtubeApi.getChannelIdsBySearch(search));
-                cache.setChannelIds(channelIds);
+            if (similarCacheOpt.isPresent()) {
+                cache = similarCacheOpt.get();
+            } else { // 연관 키워드도 없으면 api 요청
+                Set<String> channelIds = new HashSet<>(youtubeApi.getChannelIdsBySearch(search));
+                cache = new SearchCache();
+                cache.setKeyword(search);
                 cache.setLastSearchedAt(LocalDateTime.now());
+                cache.setChannelIds(channelIds);
 
                 searchCacheRepository.save(cache);
                 saveChannels(channelIds);
             }
-        }
 
+        } else { // 이미 검색한 적이 있는 경우
+            cache = cacheOpt.get();
+
+            // 2-2. 마지막 갱신이 오래되었으면 API로 갱신
+            if (cache.getLastSearchedAt().isBefore(LocalDateTime.now().minusHours(200))) {
+                Set<String> oldIds = cache.getChannelIds();
+                Set<String> newIds = new HashSet<>(youtubeApi.getChannelIdsBySearch(search));
+
+                // 없어진 채널들 삭제 작업
+                oldIds.removeAll(newIds);
+                channelRepository.deleteAllById(oldIds);
+
+                // 새로 받은 채널 저장
+                cache.setChannelIds(newIds);
+                cache.setLastSearchedAt(LocalDateTime.now());
+
+                searchCacheRepository.save(cache);
+                saveChannels(newIds);
+            }
+        }
         // 3. 캐시에서 채널 ID 가져와 DB 조회
         List<Channel> channels = channelRepository.findByIdInOrderBySubscriberCountDesc(cache.getChannelIds());
         return CompletableFuture.completedFuture(ChannelResponseDto.ChannelToDto(channels));
@@ -90,6 +106,18 @@ public class ChannelService {
             }
 
             channelRepository.upsertChannel(newChannel);
+        }
+    }
+
+    public boolean isSimilar(String a, String b) {
+        int distance = ld.apply(a, b);
+        int maxLen = Math.max(a.length(), b.length());
+        double similarity = 1 - (double) distance / maxLen;
+
+        if (maxLen <= 4) {
+            return distance <= 1;
+        } else {
+            return similarity >= 0.85;
         }
     }
 

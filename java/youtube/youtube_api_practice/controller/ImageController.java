@@ -1,6 +1,7 @@
 package youtube.youtube_api_practice.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,6 +15,7 @@ import youtube.youtube_api_practice.client.ImageClient; // Import ImageClient
 import java.util.Optional; // Import Optional
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @RestController
 @RequestMapping("/youtube/api")
 @RequiredArgsConstructor
