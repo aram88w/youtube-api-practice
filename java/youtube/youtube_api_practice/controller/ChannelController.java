@@ -2,10 +2,7 @@ package youtube.youtube_api_practice.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.service.ChannelService;
 
@@ -20,8 +17,8 @@ public class ChannelController {
 
     private final ChannelService channelService;
 
-    @GetMapping("/channel/{search}")
-    public CompletableFuture<List<ChannelResponseDto>> getChannels(@PathVariable String search) {
+    @GetMapping("/channel")
+    public CompletableFuture<List<ChannelResponseDto>> getChannels(@RequestParam("search") String search) {
         log.info("getChannels {}", search);
         return channelService.getChannelIds(search);
     }

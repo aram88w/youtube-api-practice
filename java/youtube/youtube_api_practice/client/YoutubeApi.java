@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.CommentStatus;
@@ -18,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -51,9 +50,9 @@ public class YoutubeApi {
                 .bodyToMono(JsonNode.class)
                 .block();
 
-        if (searchRoot == null || !searchRoot.has("items") || searchRoot.get("items").isEmpty()) {
-            log.info("채널을 찾을 수 없습니다: {} ", keyword);
-            throw new RuntimeException("채널을 찾을 수 없습니다: " + keyword);
+        if (searchRoot == null || !searchRoot.has("items")) {
+            log.info("Youtube API로부터 비정상적인 응답을 받았습니다: {} ", keyword);
+            return null;
         }
 
         for (JsonNode item : searchRoot.get("items")) {
@@ -69,34 +68,34 @@ public class YoutubeApi {
     }
 
     // 검색어로 유튜브 채널 ID 10개 가져오기 (비동기)
-    public Mono<List<String>> getChannelIdsBySearchAsync(String keyword) {
-        log.info("getChannelsIdBySearchAsync {}", keyword);
-
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/search")
-                        .queryParam("part", "snippet")
-                        .queryParam("q", keyword)
-                        .queryParam("type", "channel")
-                        .queryParam("maxResults", 10)
-                        .queryParam("key", apiKey)
-                        .build())
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .flatMap(searchRoot -> {
-                    if (searchRoot == null || !searchRoot.has("items") || searchRoot.get("items").isEmpty()) {
-                        log.info("채널을 찾을 수 없습니다: {}", keyword);
-                        return Mono.error(new RuntimeException("채널을 찾을 수 없습니다: " + keyword));
-                    }
-
-                    List<String> channelIds = new ArrayList<>();
-                    for (JsonNode item : searchRoot.get("items")) {
-                        String channelId = item.path("id").path("channelId").asText();
-                        channelIds.add(channelId);
-                    }
-                    return Mono.just(channelIds);
-                });
-    }
+//    public Mono<List<String>> getChannelIdsBySearchAsync(String keyword) {
+//        log.info("getChannelsIdBySearchAsync {}", keyword);
+//
+//        return webClient.get()
+//                .uri(uriBuilder -> uriBuilder
+//                        .path("/search")
+//                        .queryParam("part", "snippet")
+//                        .queryParam("q", keyword)
+//                        .queryParam("type", "channel")
+//                        .queryParam("maxResults", 10)
+//                        .queryParam("key", apiKey)
+//                        .build())
+//                .retrieve()
+//                .bodyToMono(JsonNode.class)
+//                .flatMap(searchRoot -> {
+//                    if (searchRoot == null || !searchRoot.has("items") || searchRoot.get("items").isEmpty()) {
+//                        log.info("채널을 찾을 수 없습니다: {}", keyword);
+//                        return Mono.error(new RuntimeException("채널을 찾을 수 없습니다: " + keyword));
+//                    }
+//
+//                    List<String> channelIds = new ArrayList<>();
+//                    for (JsonNode item : searchRoot.get("items")) {
+//                        String channelId = item.path("id").path("channelId").asText();
+//                        channelIds.add(channelId);
+//                    }
+//                    return Mono.just(channelIds);
+//                });
+//    }
 
 
     // 채널 ID로 Channel 객체 생성
@@ -115,8 +114,9 @@ public class YoutubeApi {
                 .block();
 
         if (root == null || !root.has("items") || root.get("items").isEmpty()) {
-            log.info("채널 정보를 찾을 수 없습니다: {} ", channelId);
-            throw new RuntimeException("채널 정보를 찾을 수 없습니다: " + channelId);
+            log.info("Youtube API로부터 비정상적인 응답을 받았습니다 {} ", channelId);
+            return null;
+//            throw new RuntimeException("채널 정보를 찾을 수 없습니다: " + channelId);
         }
 
         JsonNode item = root.get("items").get(0);
@@ -173,7 +173,8 @@ public class YoutubeApi {
                     .block();
 
             if (root == null || !root.has("items")) {
-                break;
+                log.warn("Youtube API로부터 비정상적인 비디오 목록 응답을 받았습니다.");
+                return null;
             }
 
             for (JsonNode item : root.get("items")) {
@@ -204,7 +205,6 @@ public class YoutubeApi {
     }
 
 
-
     //비디오의 최상위 댓글들 모두 가져오기 (페이징, maxResults 최대 100)
     public List<Comment> getCommentsByVideo(Video video, int limit) {
         log.info("getCommentsByVideo {}", video);
@@ -212,57 +212,53 @@ public class YoutubeApi {
 
         String videoId = video.getId();
 
-        try {
-            JsonNode root = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/commentThreads")
-                            .queryParam("part", "snippet")
-                            .queryParam("videoId", videoId)
-                            .queryParam("maxResults", limit)
-                            .queryParam("order", "relevance")      // 좋아요/추천 위주
-                            .queryParam("key", apiKey)
-                            .build())
-                    .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .block();
+        JsonNode root = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/commentThreads")
+                        .queryParam("part", "snippet")
+                        .queryParam("videoId", videoId)
+                        .queryParam("maxResults", limit)
+                        .queryParam("order", "relevance")      // 좋아요/추천 위주
+                        .queryParam("key", apiKey)
+                        .build())
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .block();
 
-            if (root == null || !root.has("items")) {
-                return comments; // 댓글이 없는 경우
-            }
-
-            for (JsonNode item : root.get("items")) {
-                JsonNode snippet = item.path("snippet").path("topLevelComment").path("snippet");
-
-                String commentId = item.path("snippet").path("topLevelComment").path("id").asText();
-                String authorId = snippet.path("authorChannelId").path("value").asText(null); // null 허용
-                String authorName = snippet.path("authorDisplayName").asText();
-                String authorThumbnail = snippet.path("authorProfileImageUrl").asText(null); // null 허용
-                String content = snippet.path("textDisplay").asText();
-                int likeCount = snippet.path("likeCount").asInt(0);
-                int replyCount = item.path("snippet").path("totalReplyCount").asInt(0);
-                LocalDateTime publishedAt = OffsetDateTime
-                        .parse(snippet.path("publishedAt").asText())
-                        .toLocalDateTime();
-
-                Comment comment = Comment.builder()
-                        .id(commentId)
-                        .authorId(authorId)
-                        .authorName(authorName)
-                        .authorThumbnailUrl(authorThumbnail)
-                        .content(content)
-                        .likeCount(likeCount)
-                        .publishedAt(publishedAt)
-                        .replyCount(replyCount)
-                        .video(video)
-                        .build();
-
-                comments.add(comment);
-            }
-        } catch (WebClientResponseException.Forbidden e) {
-            log.warn("댓글이 비활성화된 동영상입니다. videoId={}, 응답 본문: {}", videoId, e.getResponseBodyAsString());
-        } catch (Exception e) {
-            log.error("댓글을 가져오는 중 오류가 발생했습니다. videoId={}", videoId, e);
+        if (root == null || !root.has("items")) {
+            log.info("Youtube API로부터 비정상적인 응답을 받았습니다 {} ", videoId);
+            return null;
         }
+
+        for (JsonNode item : root.get("items")) {
+            JsonNode snippet = item.path("snippet").path("topLevelComment").path("snippet");
+
+            String commentId = item.path("snippet").path("topLevelComment").path("id").asText();
+            String authorId = snippet.path("authorChannelId").path("value").asText(null); // null 허용
+            String authorName = snippet.path("authorDisplayName").asText();
+            String authorThumbnail = snippet.path("authorProfileImageUrl").asText(null); // null 허용
+            String content = snippet.path("textDisplay").asText();
+            int likeCount = snippet.path("likeCount").asInt(0);
+            int replyCount = item.path("snippet").path("totalReplyCount").asInt(0);
+            LocalDateTime publishedAt = OffsetDateTime
+                    .parse(snippet.path("publishedAt").asText())
+                    .toLocalDateTime();
+
+            Comment comment = Comment.builder()
+                    .id(commentId)
+                    .authorId(authorId)
+                    .authorName(authorName)
+                    .authorThumbnailUrl(authorThumbnail)
+                    .content(content)
+                    .likeCount(likeCount)
+                    .publishedAt(publishedAt)
+                    .replyCount(replyCount)
+                    .video(video)
+                    .build();
+
+            comments.add(comment);
+        }
+
         return comments;
     }
 
@@ -289,7 +285,8 @@ public class YoutubeApi {
                 .block();
 
         if (root == null || !root.has("items")) {
-            return new ReplyResponseDto(null); // 대댓글이 없는 경우
+            log.info("Youtube API로부터 비정상적인 응답을 받았습니다 {} ", commentId);
+            return null;
         }
 
         ReplyResponseDto replyResponseDto = new ReplyResponseDto(root.path("nextPageToken").asText(null));

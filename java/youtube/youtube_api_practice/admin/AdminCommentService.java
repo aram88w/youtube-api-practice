@@ -11,6 +11,7 @@ import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.CommentStatus;
 import youtube.youtube_api_practice.domain.Video;
+import youtube.youtube_api_practice.provider.YoutubeProvider;
 import youtube.youtube_api_practice.repository.Comment.CommentRepository;
 import youtube.youtube_api_practice.repository.Video.VideoRepository;
 import youtube.youtube_api_practice.repository.channel.ChannelRepository;
@@ -24,6 +25,7 @@ import java.util.List;
 public class AdminCommentService {
 
     private final YoutubeApi youtubeApi;
+    private final YoutubeProvider youtubeProvider;
     private final ChannelRepository channelRepository;
     private final VideoRepository videoRepository;
     private final CommentRepository commentRepository;
@@ -34,17 +36,17 @@ public class AdminCommentService {
 
         long start = System.currentTimeMillis();
 
-        Channel newChannel = youtubeApi.getChannelById(channelId);
+        Channel newChannel = youtubeProvider.fetchChannel(channelId);
         newChannel.setCommentStatus(CommentStatus.COMMENT_EXTENDED);
         newChannel.setLastSelectAt(LocalDateTime.now());
         channelRepository.upsertChannel(newChannel);
 
-        List<Video> videos = youtubeApi.getVideosByChannel(newChannel, videoLimit);
+        List<Video> videos = youtubeProvider.fetchVideos(newChannel, videoLimit);
         videoRepository.upsertVideos(videos);
 
         for (Video video : videos) {
             log.info("videoId={} videoTitle={}", video.getId(), video.getTitle());
-            List<Comment> comments = youtubeApi.getCommentsByVideo(video, commentLimit);
+            List<Comment> comments = youtubeProvider.fetchComments(video, commentLimit);
             for (Comment comment : comments) {
                 log.info("comment {}", comment);
             }

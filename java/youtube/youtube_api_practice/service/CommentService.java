@@ -15,6 +15,9 @@ import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.dto.CommentResponseDto;
 import youtube.youtube_api_practice.dto.ReplyResponseDto;
+import youtube.youtube_api_practice.exception.ChannelNotFoundException;
+import youtube.youtube_api_practice.exception.YoutubeApiFailedException;
+import youtube.youtube_api_practice.provider.YoutubeProvider;
 import youtube.youtube_api_practice.repository.Comment.CommentRepository;
 import youtube.youtube_api_practice.repository.channel.ChannelRepository;
 
@@ -34,7 +37,6 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class CommentService {
 
-    private final YoutubeApi youtubeApi;
     private final ChannelRepository channelRepository;
     private final CommentRepository commentRepository;
     private final CommentSyncService commentSyncService; // 동기화 작업용 서비스
@@ -47,6 +49,7 @@ public class CommentService {
     // 조회수 중복 방지용 캐시
     private final Map<String, Long> viewCooldownCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final YoutubeProvider youtubeProvider;
 
     @PostConstruct
     public void init() {
@@ -82,9 +85,15 @@ public class CommentService {
         }
 
         // 동기화 작업(필요했다면)이 끝난 후, DB에서 데이터를 조회하여 반환
-        return syncFuture.thenCompose(v ->
-                CompletableFuture.completedFuture(findCommentsFromDb(channelId, page, size))
-        );
+        return syncFuture.thenCompose(v -> CompletableFuture.completedFuture(findCommentsFromDb(channelId, page, size)))
+                .exceptionally(ex -> {
+                    log.info("비동기 작업 중 에러 발생 : {}", ex);
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    if (cause instanceof ChannelNotFoundException) {
+                        throw (ChannelNotFoundException) cause;
+                    }
+                    throw new YoutubeApiFailedException("Error during asynchronous sync task", cause);
+                });
     }
 
     public CompletableFuture<Page<CommentResponseDto>> getMoreComments(String channelId) {
@@ -101,9 +110,15 @@ public class CommentService {
         });
 
         // 동기화 작업이 끝난 후, DB에서 데이터를 조회하여 반환
-        return syncFuture.thenCompose(v ->
-                CompletableFuture.completedFuture(findCommentsFromDb(channelId, 0, 10))
-        );
+        return syncFuture.thenCompose(v -> CompletableFuture.completedFuture(findCommentsFromDb(channelId, 0, 10)))
+                .exceptionally(ex -> {
+                    log.info("비동기 작업 중 에러 발생 : {}", ex);
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    if (cause instanceof ChannelNotFoundException) {
+                        throw (ChannelNotFoundException) cause;
+                    }
+                    throw new YoutubeApiFailedException("Error during asynchronous sync task", cause);
+                });
     }
 
     public Page<CommentResponseDto> findCommentsFromDb(String channelId, int page, int size) {
@@ -134,6 +149,6 @@ public class CommentService {
     @Cacheable("replies")
     public ReplyResponseDto getReplies(String commentId, String pageToken) {
         log.info("댓글의 답글 조회: {}, 페이지 토큰: {}", commentId, pageToken);
-        return youtubeApi.getRepliesByComment(commentId, pageToken);
+        return youtubeProvider.fetchReply(commentId, pageToken);
     }
 }

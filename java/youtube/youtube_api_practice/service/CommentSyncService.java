@@ -10,6 +10,8 @@ import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.CommentStatus;
 import youtube.youtube_api_practice.domain.Video;
+import youtube.youtube_api_practice.exception.ChannelNotFoundException;
+import youtube.youtube_api_practice.provider.YoutubeProvider;
 import youtube.youtube_api_practice.repository.Comment.CommentRepository;
 import youtube.youtube_api_practice.repository.Video.VideoRepository;
 import youtube.youtube_api_practice.repository.channel.ChannelRepository;
@@ -25,7 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CommentSyncService {
 
-    private final YoutubeApi youtubeApi;
+    private final YoutubeProvider youtubeProvider;
     private final ChannelRepository channelRepository;
     private final CommentRepository commentRepository;
     private final VideoRepository videoRepository;
@@ -39,15 +41,15 @@ public class CommentSyncService {
         long start = System.currentTimeMillis();
 
         // API를 통해 최신 채널 정보를 가져옴
-        Channel channel = youtubeApi.getChannelById(channelId);
+        Channel channel = youtubeProvider.fetchChannel(channelId);
 
         // 가벼운 동기화: 최근 영상 33개
-        List<Video> videos = youtubeApi.getVideosByChannel(channel, 33);
+        List<Video> videos = youtubeProvider.fetchVideos(channel, 33);
         videoRepository.upsertVideos(videos);
 
         for (Video video : videos) {
             // 영상당 댓글 30개
-            List<Comment> comments = youtubeApi.getCommentsByVideo(video, 30);
+            List<Comment> comments = youtubeProvider.fetchComments(video, 30);
             commentRepository.upsertComments(comments);
         }
 
@@ -69,15 +71,15 @@ public class CommentSyncService {
         long start = System.currentTimeMillis();
 
         Channel channel = channelRepository.findById(channelId)
-                .orElseThrow(() -> new RuntimeException("Channel not found with id: " + channelId));
+                .orElseThrow(() -> new ChannelNotFoundException("Channel not found with id: " + channelId));
 
         // 무거운 동기화: 최근 영상 100개
-        List<Video> videos = youtubeApi.getVideosByChannel(channel, 100);
+        List<Video> videos = youtubeProvider.fetchVideos(channel, 100);
         videoRepository.upsertVideos(videos);
 
         for (Video video : videos) {
             // 영상당 댓글 30개
-            List<Comment> comments = youtubeApi.getCommentsByVideo(video, 30);
+            List<Comment> comments = youtubeProvider.fetchComments(video, 30);
             commentRepository.upsertComments(comments);
         }
 
