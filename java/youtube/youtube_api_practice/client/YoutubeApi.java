@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Component
@@ -181,7 +180,21 @@ public class YoutubeApi {
                 JsonNode snippet = item.path("snippet");
                 String videoId = snippet.path("resourceId").path("videoId").asText();
                 String videoTitle = snippet.path("title").asText();
-                String videoThumbnail = snippet.path("thumbnails").path("high").path("url").asText();
+                // --- 썸네일 폴백 로직 시작 ---
+                JsonNode thumbnailsNode = snippet.path("thumbnails");
+                String videoThumbnail;
+                if (thumbnailsNode.has("maxres")) {
+                    videoThumbnail = thumbnailsNode.path("maxres").path("url").asText();
+                } else if (thumbnailsNode.has("standard")) {
+                    videoThumbnail = thumbnailsNode.path("standard").path("url").asText();
+                } else if (thumbnailsNode.has("high")) {
+                    videoThumbnail = thumbnailsNode.path("high").path("url").asText();
+                } else if (thumbnailsNode.has("medium")) {
+                    videoThumbnail = thumbnailsNode.path("medium").path("url").asText();
+                } else {
+                    videoThumbnail = thumbnailsNode.path("default").path("url").asText();
+                }
+                // --- 썸네일 폴백 로직 끝 ---
                 LocalDateTime videoPublishedAt = OffsetDateTime
                         .parse(snippet.path("publishedAt").asText())
                         .toLocalDateTime();

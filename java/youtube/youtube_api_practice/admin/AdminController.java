@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminController {
 
-    private final AdminCommentService commentService;
+    private final AdminService commentService;
 
     @GetMapping("/")
     public String home() {
@@ -36,5 +36,12 @@ public class AdminController {
         commentService.allUpdate(limit);
 
         return ResponseEntity.ok("Update started for allUpdate");
+    }
+
+    @GetMapping("/admin/updateVideosThumbnail")
+    public ResponseEntity<String> updateVideosThumbnail() {
+        commentService.allVideoThumbnailUpdate();
+
+        return ResponseEntity.ok("Update started for videoThumbnailUpdate");
     }
 }

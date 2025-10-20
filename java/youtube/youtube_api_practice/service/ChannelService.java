@@ -5,15 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClientRequestException;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import youtube.youtube_api_practice.client.YoutubeApi;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.SearchCache;
 import youtube.youtube_api_practice.dto.ChannelResponseDto;
 import youtube.youtube_api_practice.exception.ChannelNotFoundException;
-import youtube.youtube_api_practice.exception.YoutubeApiFailedException;
-import youtube.youtube_api_practice.provider.YoutubeProvider;
+import youtube.youtube_api_practice.client.YoutubeProvider;
 import youtube.youtube_api_practice.repository.SearchCacheRepository;
 import youtube.youtube_api_practice.repository.channel.ChannelRepository;
 
@@ -143,7 +139,7 @@ public class ChannelService {
                         .subscriberCount(channel.getSubscriberCount())
                         .commentStatus(channel.getCommentStatus())
                         .build())
-                .orElseThrow(() -> new ChannelNotFoundException("Channel not found: " + channelId));
+                .orElseThrow(() -> new ChannelNotFoundException("Channel not found id: " + channelId));
     }
 
 

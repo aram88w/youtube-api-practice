@@ -1,17 +1,15 @@
 package youtube.youtube_api_practice.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import youtube.youtube_api_practice.client.YoutubeApi;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.domain.CommentStatus;
 import youtube.youtube_api_practice.domain.Video;
 import youtube.youtube_api_practice.exception.ChannelNotFoundException;
-import youtube.youtube_api_practice.provider.YoutubeProvider;
+import youtube.youtube_api_practice.client.YoutubeProvider;
 import youtube.youtube_api_practice.repository.Comment.CommentRepository;
 import youtube.youtube_api_practice.repository.Video.VideoRepository;
 import youtube.youtube_api_practice.repository.channel.ChannelRepository;

@@ -10,14 +10,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import youtube.youtube_api_practice.client.YoutubeApi;
 import youtube.youtube_api_practice.domain.Channel;
 import youtube.youtube_api_practice.domain.Comment;
 import youtube.youtube_api_practice.dto.CommentResponseDto;
 import youtube.youtube_api_practice.dto.ReplyResponseDto;
 import youtube.youtube_api_practice.exception.ChannelNotFoundException;
+import youtube.youtube_api_practice.exception.QuotaExceededException;
 import youtube.youtube_api_practice.exception.YoutubeApiFailedException;
-import youtube.youtube_api_practice.provider.YoutubeProvider;
+import youtube.youtube_api_practice.client.YoutubeProvider;
 import youtube.youtube_api_practice.repository.Comment.CommentRepository;
 import youtube.youtube_api_practice.repository.channel.ChannelRepository;
 
@@ -91,6 +91,9 @@ public class CommentService {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                     if (cause instanceof ChannelNotFoundException) {
                         throw (ChannelNotFoundException) cause;
+                    }
+                    if (cause instanceof QuotaExceededException) {
+                        throw (QuotaExceededException) cause;
                     }
                     throw new YoutubeApiFailedException("Error during asynchronous sync task", cause);
                 });

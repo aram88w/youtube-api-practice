@@ -24,8 +24,16 @@ public class GlobalRestExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_GATEWAY);
     }
 
+    @ExceptionHandler(QuotaExceededException.class)
+    public ResponseEntity<ErrorResponse> quotaExceededHandler(QuotaExceededException e) {
+        log.error("handleQuotaExceeded : {}", e.getMessage(), e.getCause());
+        ErrorResponse response = new ErrorResponse("QUOTA_EXCEEDED", e.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> exceptionHandler(Exception e) {
+
         log.error("handleException : {}", e.getMessage());
         ErrorResponse response = new ErrorResponse("EXCEPTION", "An unexpected internal server error occurred.");
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
