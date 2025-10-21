@@ -54,7 +54,7 @@ public class ChannelService {
                 cache = similarCacheOpt.get();
             } else { // 연관 키워드도 없으면 api 요청
                 log.info("연관 키워드 없는 경우");
-                Set<String> channelIds = youtubeProvider.fetchChannelIds(search);
+                List<String> channelIds = youtubeProvider.fetchChannelIds(search);
                 cache = new SearchCache();
                 cache.setKeyword(search);
                 cache.setLastSearchedAt(LocalDateTime.now());
@@ -70,8 +70,8 @@ public class ChannelService {
 
             // 2-2. 마지막 갱신이 오래되었으면 API로 갱신
             if (cache.getLastSearchedAt().isBefore(LocalDateTime.now().minusHours(200))) {
-                Set<String> oldIds = cache.getChannelIds();
-                Set<String> newIds = youtubeProvider.fetchChannelIds(search);
+                List<String> oldIds = cache.getChannelIds();
+                List<String> newIds = youtubeProvider.fetchChannelIds(search);
 
                 // 없어진 채널들 삭제 작업
                 oldIds.removeAll(newIds);
@@ -91,7 +91,7 @@ public class ChannelService {
     }
 
 
-    public void saveChannels(Set<String> channelIds) {
+    public void saveChannels(List<String> channelIds) {
         log.info("saveChannels {}", channelIds);
 
         // 1. 기존 채널 정보를 Map으로 한번에 조회

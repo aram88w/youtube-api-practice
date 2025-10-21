@@ -60,8 +60,7 @@ public class Video implements Persistable<String> {
         this.channel = channel;
     }
 
-    //==연관관계 편의 메서드==//
-    public void addComment(Comment comment) {
-        comments.add(comment);
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
     }
 }

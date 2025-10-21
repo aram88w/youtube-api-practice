@@ -28,7 +28,7 @@ public class YoutubeProvider {
     private final YoutubeApi youtubeApi;
     private final ObjectMapper objectMapper;
 
-    public Set<String> fetchChannelIds(String search) {
+    public List<String> fetchChannelIds(String search) {
         log.info("fetchChannelIds {}", search);
 
         try {
@@ -36,7 +36,7 @@ public class YoutubeProvider {
             if (result == null) {
                 throw new YoutubeApiFailedException("Failed to call Youtube API for searchChannelIds: " + search);
             }
-            return new HashSet<>(result);
+            return result;
         } catch (WebClientRequestException e) {
             throw new YoutubeApiFailedException("Failed to request Youtube API for searchChannelIds: " + search, e);
         } catch (WebClientResponseException e) {
