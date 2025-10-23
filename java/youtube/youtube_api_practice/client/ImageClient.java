@@ -1,5 +1,6 @@
 package youtube.youtube_api_practice.client;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -14,6 +15,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
 
+@Slf4j
 @Component
 public class ImageClient {
 
@@ -31,17 +33,17 @@ public class ImageClient {
 
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<byte[]> response = restTemplate.exchange(uri, HttpMethod.GET, entity, byte[].class);
+                ResponseEntity<byte[]> response = restTemplate.exchange(uri, HttpMethod.GET, entity, byte[].class);
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return Optional.of(response.getBody());
             }
         } catch (URISyntaxException e) {
-            System.err.println("Invalid URL syntax in ImageClient: " + url + " - " + e.getMessage());
+            log.error("Invalid URL syntax in ImageClient: " + url + " - " + e.getMessage());
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            System.err.println("HTTP error fetching image in ImageClient: " + url + " - Status: " + e.getStatusCode() + " - " + e.getMessage());
+            log.error("HTTP error fetching image in ImageClient: " + url + " - Status: " + e.getStatusCode() + " - " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("Unexpected error fetching image in ImageClient: " + url + " - " + e.getMessage());
+            log.error("Unexpected error fetching image in ImageClient: " + url + " - " + e.getMessage());
         }
         return Optional.empty();
     }

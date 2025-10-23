@@ -6,6 +6,4 @@ import youtube.youtube_api_practice.domain.Video;
 import java.util.List;
 
 public interface VideoRepository extends JpaRepository<Video, String>, VideoJdbcRepository {
-
-    List<Video> findAllByChannelId(String channelId);
 }
